@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BP · 더보기수정</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BQ · 더보기수정2</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -18277,14 +18277,17 @@ function homeRender(){
 function openDrawer(){
   const ov = document.getElementById('drawerOverlay');
   const pn = document.getElementById('drawerPanel');
-  if(ov) ov.style.display = 'block';
-  if(pn){ pn.style.transform = 'translateX(0)'; }
+  if(ov){ ov.style.display = 'block'; ov.style.zIndex = '1000000'; }
+  if(pn){ pn.style.zIndex = '1000001'; pn.style.transform = 'translateX(0)'; }
+  // 드로어 여는 동안 하단 메뉴 숨김 (겹침 방지)
+  try { var bn=document.getElementById('bottomNav'); if(bn) bn.style.visibility='hidden'; } catch(e){}
 }
 function closeDrawer(){
   const ov = document.getElementById('drawerOverlay');
   const pn = document.getElementById('drawerPanel');
   if(pn){ pn.style.transform = 'translateX(-100%)'; }
   if(ov) setTimeout(()=>{ ov.style.display = 'none'; }, 250);
+  try { var bn=document.getElementById('bottomNav'); if(bn) bn.style.visibility='visible'; } catch(e){}
 }
 
 /* ═══ 첫 화면(메뉴)이 보일 때: 대시보드를 인라인 렌더 ═══ */
