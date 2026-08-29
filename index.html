@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BR · 더보기수정3</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BS · 제자리메뉴</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -18912,11 +18912,7 @@ window.addEventListener('load', function(){ setTimeout(injectHamburgers, 300); }
 function navGo(where){
   try {
     if(where==='home'){ if(typeof showMenuScreen==='function') showMenuScreen(); }
-    else if(where==='more'){
-      // 드로어가 menuScreen 안에 있으므로, 홈을 먼저 켜고 드로어를 연다
-      if(typeof showMenuScreen==='function') showMenuScreen();
-      setTimeout(function(){ try{ if(typeof openDrawer==='function') openDrawer(); }catch(e){} }, 60);
-    }
+    else if(where==='more'){ if(typeof openDrawer==='function') openDrawer(); }
     else if(where==='quote' || where==='giseong'){
       if(typeof requireLogin==='function') requireLogin(where);
       else if(typeof openApp==='function') openApp(where);
@@ -18934,6 +18930,13 @@ function navHighlight(where){
 }
 document.addEventListener('DOMContentLoaded', function(){
   try { document.body.style.paddingBottom = '84px'; } catch(e){}
+  // 드로어(더보기 메뉴)를 최상위(body)로 빼내어 어느 화면에서든 그 자리에서 열리게 함
+  try {
+    var ov = document.getElementById('drawerOverlay');
+    var pn = document.getElementById('drawerPanel');
+    if(ov && ov.parentNode !== document.body) document.body.appendChild(ov);
+    if(pn && pn.parentNode !== document.body) document.body.appendChild(pn);
+  } catch(e){}
 });
 // 스크롤 내리면 하단 메뉴 숨김, 올리면 다시 표시 (여러 스크롤 컨테이너 대응)
 (function(){
