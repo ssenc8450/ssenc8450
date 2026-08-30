@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BS · 제자리메뉴</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BU · 매출거래처정리</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -10116,6 +10116,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div style="margin-left:auto;display:flex;gap:5px;flex-shrink:0;">
       <button onclick="caShowSalesChart()" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">📊 차트</button>
       <button onclick="caRestoreHiddenClients()" title="숨긴 거래처 복원" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">↩️ 복원</button>
+      <button onclick="caSyncClientsFromSales(false); caRender();" style="padding:6px 10px;background:#107c41;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;margin-right:6px;">📥 매출정리</button>
       <button onclick="caAddNewClient()" style="padding:6px 10px;background:#0d1b2a;color:#fff;border:1px solid #0d1b2a;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">+ 추가</button>
       <button onclick="caPrintPDF()" style="padding:6px 10px;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">🖨 PDF</button>
     </div>
@@ -13772,53 +13773,40 @@ function caToNum(s){ return parseFloat(String(s).replace(/,/g,''))||0; }
 
 /* 거래처별 데이터 집계 */
 function caCompute(){
-  const claims = gsGetClaims();
-  const payments = gsGetPayments();
   const clientBook = (function(){
     try { return JSON.parse(localStorage.getItem('ssenc_clients')||'[]'); } catch(e) { return []; }
   })();
 
-  // 청구 데이터로부터 거래처 추출
+  // 매출 관리의 모든 매출(직접등록 + 홈택스 + 기성연동)을 거래처별로 집계
+  let rows = [];
+  try { rows = (typeof maGetMerged === 'function') ? maGetMerged() : []; } catch(e){ rows = []; }
+
   const byClient = {};
-  claims.forEach(c => {
-    const name = (c.client||'').trim() || '(미지정)';
-    if(!byClient[name]) byClient[name] = { name, claims:[], payments:[], sites:new Set() };
-    byClient[name].claims.push(c);
-    if(c.site) byClient[name].sites.add(c.site);
+  rows.forEach(r => {
+    const name = (r.client||'').trim() || '(미지정)';
+    if(!byClient[name]) byClient[name] = { name, rows:[], sites:new Set() };
+    byClient[name].rows.push(r);
+    if(r.site) byClient[name].sites.add(r.site);
   });
-  // 입금 데이터 분배 (site 매핑 사용)
-  payments.forEach(p => {
-    // p.site 기준으로 거래처 찾기
-    let matched = false;
-    for(const name in byClient){
-      if(byClient[name].sites.has(p.site)){
-        byClient[name].payments.push(p);
-        matched = true;
-        break;
-      }
-    }
-    if(!matched){
-      const name = '(미지정)';
-      if(!byClient[name]) byClient[name] = { name, claims:[], payments:[], sites:new Set() };
-      byClient[name].payments.push(p);
-    }
-  });
-  // 거래처 목록에 있는데 청구 없는 곳도 추가
+
+  // 거래처 목록에 있는데 매출 없는 곳도 추가
   clientBook.forEach(cb => {
     const name = (cb.name||'').trim();
-    if(name && !byClient[name]) byClient[name] = { name, claims:[], payments:[], sites:new Set() };
+    if(name && !byClient[name]) byClient[name] = { name, rows:[], sites:new Set() };
   });
 
   // 각 거래처 통계 계산
   return Object.values(byClient).map(c => {
-    const supplyTotal = c.claims.reduce((s,x) => s + caToNum(x.amount), 0);
-    const vatTotal = Math.round(supplyTotal * 1.1);
-    const paidTotal = c.payments.reduce((s,x) => s + caToNum(x.amount), 0);
-    const unpaid = Math.max(0, vatTotal - paidTotal);
-    const paidRate = vatTotal > 0 ? Math.round((paidTotal / vatTotal) * 100) : (c.claims.length === 0 ? 100 : 0);
-    // 신뢰도 점수
+    const supplyTotal = c.rows.reduce((s,x) => s + caToNum(x.amount), 0);       // 공급가액 합
+    const vatTotal = c.rows.reduce((s,x) => s + caToNum(x.total || (caToNum(x.amount)+caToNum(x.vat))), 0); // 합계(VAT 포함)
+    const paidTotal = c.rows.reduce((s,x) => s + caToNum(x.paidAmount), 0);     // 수금액 합
+    const unpaid = Math.max(0, vatTotal - paidTotal);                          // 미수금
+    const paidRate = vatTotal > 0 ? Math.round((paidTotal / vatTotal) * 100) : (c.rows.length === 0 ? 100 : 0);
+    // 최근 거래일
+    const lastDate = c.rows.map(r=>r.date||'').filter(Boolean).sort().slice(-1)[0] || '';
+    // 신뢰도 점수 (수금률 기반)
     let trust = '신규', trustColor = '#9ca3af', trustStars = '';
-    if(c.claims.length === 0){ trust = '신규'; trustColor = '#6b7280'; trustStars = '–'; }
+    if(c.rows.length === 0){ trust = '신규'; trustColor = '#6b7280'; trustStars = '–'; }
     else if(paidRate >= 95){ trust = '우수'; trustColor = '#059669'; trustStars = '★★★★★'; }
     else if(paidRate >= 80){ trust = '양호'; trustColor = '#10b981'; trustStars = '★★★★☆'; }
     else if(paidRate >= 60){ trust = '보통'; trustColor = '#f59e0b'; trustStars = '★★★☆☆'; }
@@ -13827,13 +13815,14 @@ function caCompute(){
 
     return {
       name: c.name,
-      claims: c.claims,
-      payments: c.payments,
+      claims: c.rows,     // 호환: 기존 코드가 claims를 참조할 수 있으므로 rows를 넣음
+      rows: c.rows,
+      payments: [],
       sites: Array.from(c.sites),
-      supplyTotal, vatTotal, paidTotal, unpaid, paidRate,
+      supplyTotal, vatTotal, paidTotal, unpaid, paidRate, lastDate,
       trust, trustColor, trustStars,
-      claimCount: c.claims.length,
-      paymentCount: c.payments.length
+      claimCount: c.rows.length,
+      paymentCount: 0
     };
   });
 }
@@ -13841,6 +13830,33 @@ function caCompute(){
 /* ═══════════════════════════════════════════════════════════
    📋 거래처 추가/수정/삭제
    ═══════════════════════════════════════════════════════════ */
+// 매출에 있는 거래처를 거래처 목록(ssenc_clients)에 자동 등록
+function caSyncClientsFromSales(silent){
+  let book = [];
+  try { book = JSON.parse(localStorage.getItem('ssenc_clients')||'[]'); } catch(e){ book = []; }
+  const existing = new Set(book.map(c => (c.name||'').trim()).filter(Boolean));
+  let rows = [];
+  try { rows = (typeof maGetMerged === 'function') ? maGetMerged() : []; } catch(e){ rows = []; }
+  let added = 0;
+  rows.forEach(r => {
+    const name = (r.client||'').trim();
+    if(name && name !== '(미지정)' && !existing.has(name)){
+      book.push({ name: name, phone:'', manager:'', memo:'', addedFrom:'매출자동', added: Date.now() });
+      existing.add(name);
+      added++;
+    }
+  });
+  if(added > 0){
+    try { localStorage.setItem('ssenc_clients', JSON.stringify(book)); } catch(e){}
+    try { if(typeof autoSyncUpload === 'function') autoSyncUpload(); } catch(e){}
+    if(typeof logAction === 'function') logAction('정리','거래처', '매출에서 '+added+'곳 자동 등록');
+  }
+  if(!silent){
+    alert(added > 0 ? ('✅ 매출 거래처 ' + added + '곳을 거래처 목록에 정리했습니다.') : '이미 모든 매출 거래처가 목록에 있습니다.');
+  }
+  return added;
+}
+
 function caAddNewClient(){
   caShowClientForm(null);
 }
@@ -14294,6 +14310,7 @@ function caShowSitesQuickList(name){
 }
 
 function caRender(){
+  try { caSyncClientsFromSales(true); } catch(e){}   // 매출 거래처 자동 정리
   const hidden = getHiddenClients();
   const all = caCompute().filter(c => !hidden.includes(c.name));
   const q = (document.getElementById('ca-search')?.value||'').trim().toLowerCase();
