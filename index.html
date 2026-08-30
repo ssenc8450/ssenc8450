@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BX · 거래처수금반영</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BY · 누적매출표시</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -18404,14 +18404,15 @@ function dashFullRender(targetId){
   try { if(typeof calGet === 'function') cals = calGet() || []; } catch(e){}
 
   // 매출 집계
-  let mSales = 0, ySales = 0, unpaidIn = 0, unpaidInCnt = 0;
+  let mSales = 0, ySales = 0, ySupply = 0, unpaidIn = 0, unpaidInCnt = 0;
   const monthSales = {}, byClient = {}, unpaidRows = [];
   sales.forEach(r => {
     const tot = (r.total != null) ? num(r.total) : Math.round(num(r.amount) * 1.1);
+    const sup = num(r.amount);
     const m = (r.date||'').slice(0,7);
     if(m){ monthSales[m] = (monthSales[m]||0) + tot; }
     if(m === ym) mSales += tot;
-    if(m.slice(0,4) === String(now.getFullYear())) ySales += tot;
+    if(m.slice(0,4) === String(now.getFullYear())){ ySales += tot; ySupply += sup; }
     const u = Math.max(0, tot - num(r.paidAmount));
     if(u > 0){
       unpaidIn += u; unpaidInCnt++;
@@ -18645,9 +18646,15 @@ function dashFullRender(targetId){
 
   /* ⑩ 올해 누적 */
   html += card(
-    '<div style="display:flex;justify-content:space-between;align-items:center;">'
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
     + '<span style="font-size:12px;color:#475569;font-weight:700;">📅 ' + now.getFullYear() + '년 누적 매출</span>'
-    + '<span style="font-size:16px;font-weight:800;color:#16a34a;">' + full(ySales) + '</span></div>', 'ledger');
+    + '</div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0;">'
+    +   '<span style="font-size:12px;color:#64748b;font-weight:600;">부가세 별도 (공급가액)</span>'
+    +   '<span style="font-size:14px;font-weight:800;color:#1e293b;">' + full(ySupply) + '</span></div>'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 0;border-top:1px solid #f1f5f9;margin-top:6px;">'
+    +   '<span style="font-size:12px;color:#64748b;font-weight:600;">부가세 포함 (합계)</span>'
+    +   '<span style="font-size:16px;font-weight:800;color:#16a34a;">' + full(ySales) + '</span></div>', 'ledger');
 
   box.innerHTML = html;
 }
