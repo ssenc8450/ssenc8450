@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BU · 매출거래처정리</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BW · 수금부가세포함</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -9515,7 +9515,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <option value="평판재하시험">평판재하시험</option>
             </select>
           </div>
-          <div class="gf"><label>청구일자</label><input id="gc-date" type="date"/></div>
+          <div class="gf"><label style="color:#1e40af;font-weight:800;">📅 청구일자 (달력 선택)</label><input id="gc-date" type="date" style="border:2px solid #93c5fd;background:#eff6ff;"/></div>
           <div class="gf"><label>비고</label><input id="gc-note" placeholder="특이사항 (선택)"/></div>
         </div>
 
@@ -10725,6 +10725,14 @@ function gsAddClaim(){
   if(!site){
     alert('⚠️ 현장명이 비어있습니다.\n\n견적서를 선택하셨다면 견적서에 현장명이 있는지 확인해주세요.\n또는 현장명 칸에 직접 입력해주세요.');
     document.getElementById('gc-site').focus();
+    return;
+  }
+
+  // 청구일자 필수 — 달력으로 지정하도록 안내
+  if(!date){
+    alert('📅 청구일자를 지정해주세요.\n\n"청구일자" 칸을 눌러 달력에서 날짜를 선택하세요.');
+    var _dEl = document.getElementById('gc-date');
+    if(_dEl){ _dEl.focus(); try{ _dEl.showPicker && _dEl.showPicker(); }catch(e){} }
     return;
   }
 
@@ -17399,8 +17407,11 @@ function maReceive(id){
   const rows = maGetMerged();
   const row = rows.find(r => r.id === id);
   if(!row){ return; }
-  const bill = maToNum(row.billable);
-  const already = maToNum(row.paidAmount);
+  // 받을금액은 항상 부가세 포함(합계) 기준
+  const bill = maToNum(row.total || row.billable);
+  // 기성연동 매출의 기수금은 공급가액 기준이므로 부가세 포함으로 환산(×1.1)
+  const rawPaid = maToNum(row.paidAmount);
+  const already = (row._src === '기성') ? Math.round(rawPaid * 1.1) : rawPaid;
   const remain = Math.max(0, bill - already);
   if(remain <= 0){ alert('이미 전액 수금완료된 매출입니다.'); return; }
 
