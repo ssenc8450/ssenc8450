@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BW · 수금부가세포함</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BX · 거래처수금반영</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -13807,9 +13807,19 @@ function caCompute(){
   return Object.values(byClient).map(c => {
     const supplyTotal = c.rows.reduce((s,x) => s + caToNum(x.amount), 0);       // 공급가액 합
     const vatTotal = c.rows.reduce((s,x) => s + caToNum(x.total || (caToNum(x.amount)+caToNum(x.vat))), 0); // 합계(VAT 포함)
-    const paidTotal = c.rows.reduce((s,x) => s + caToNum(x.paidAmount), 0);     // 수금액 합
+    // 수금액: 기성연동은 공급가액 기준이므로 부가세 포함으로 환산(×1.1)
+    const paidTotal = c.rows.reduce((s,x) => {
+      const raw = caToNum(x.paidAmount);
+      return s + (x._src === '기성' ? Math.round(raw * 1.1) : raw);
+    }, 0);
     const unpaid = Math.max(0, vatTotal - paidTotal);                          // 미수금
     const paidRate = vatTotal > 0 ? Math.round((paidTotal / vatTotal) * 100) : (c.rows.length === 0 ? 100 : 0);
+    // 입금 내역 목록 (수금된 매출건들)
+    const paymentsList = c.rows.filter(x => caToNum(x.paidAmount) > 0).map(x => {
+      const raw = caToNum(x.paidAmount);
+      const amt = (x._src === '기성') ? Math.round(raw * 1.1) : raw;
+      return { date: x.date||'', site: x._site||x.site||'', amount: amt };
+    });
     // 최근 거래일
     const lastDate = c.rows.map(r=>r.date||'').filter(Boolean).sort().slice(-1)[0] || '';
     // 신뢰도 점수 (수금률 기반)
@@ -13825,12 +13835,12 @@ function caCompute(){
       name: c.name,
       claims: c.rows,     // 호환: 기존 코드가 claims를 참조할 수 있으므로 rows를 넣음
       rows: c.rows,
-      payments: [],
+      payments: paymentsList,
       sites: Array.from(c.sites),
       supplyTotal, vatTotal, paidTotal, unpaid, paidRate, lastDate,
       trust, trustColor, trustStars,
       claimCount: c.rows.length,
-      paymentCount: 0
+      paymentCount: paymentsList.length
     };
   });
 }
