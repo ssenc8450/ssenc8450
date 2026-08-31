@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BY · 누적매출표시</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BZ · 매입부가세포함</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -12719,7 +12719,7 @@ function mpRender(){
     const card = document.createElement('div');
     card.style.cssText = 'padding:12px 14px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;';
 
-    const amt     = mpToNum(x.amount);
+    const amt     = Math.round(mpToNum(x.amount) * 1.1);   // 부가세 포함 총액
     const paidAmt = mpToNum(x.paidAmount);
     const remain  = Math.max(0, amt - paidAmt);
     const status  = paidAmt <= 0 ? 'unpaid' : (paidAmt >= amt ? 'full' : 'partial');
@@ -12785,7 +12785,8 @@ function mpAddPayment(id){
   const x = list.find(r => r.id === id);
   if(!x) return;
 
-  const amt = mpToNum(x.amount);
+  const supply = mpToNum(x.amount);
+  const amt = Math.round(supply * 1.1);   // 부가세 포함 총액
   const paidAmt = mpToNum(x.paidAmount);
   const remain = Math.max(0, amt - paidAmt);
 
