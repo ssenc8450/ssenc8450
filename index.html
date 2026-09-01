@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CB · 매입항목분리</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CC · 매입항목별정리</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -12756,11 +12756,12 @@ function mpRender(){
   const elUnpaid = document.getElementById('mp-stat-unpaid'); if(elUnpaid) elUnpaid.textContent = '₩'+mpFmt(sum.unpaid);
   const elPaid = document.getElementById('mp-stat-paid'); if(elPaid) elPaid.textContent = '₩'+mpFmt(sum.paid);
 
-  // 목록 건수/합계 (현재 필터·월 기준)
+  // 목록 건수/합계 (현재 필터·월 기준) — 최종 매입 금액은 모든 항목 합산(일반=VAT포함, 카드/차량=그대로)
   const listSupply = list.reduce((s,x)=>s+mpToNum(x.amount),0);
+  const listFinal = list.reduce((s,x)=>s+mpTotalOf(x),0);
   const cntEl = document.getElementById('mp-list-count'); if(cntEl) cntEl.textContent = list.length ? '· '+list.length+'건' : '';
   const sumEl = document.getElementById('mp-list-sum');
-  if(sumEl) sumEl.innerHTML = list.length ? ('공급가액 <span style="color:#0d1b2a;">₩'+mpFmt(listSupply)+'</span> · VAT포함 <span style="color:#0e7490;">₩'+mpFmt(Math.round(listSupply*1.1))+'</span>') : '';
+  if(sumEl) sumEl.innerHTML = list.length ? ('최종 매입 <span style="color:#0d1b2a;font-weight:800;">₩'+mpFmt(listFinal)+'</span>') : '';
 
   // 목록
   const container = document.getElementById('mp-list');
@@ -12771,7 +12772,32 @@ function mpRender(){
   }
 
   container.innerHTML = '';
-  list.forEach((x, idx) => {
+
+  // 항목별로 그룹 분리 (일반 / 카드값 / 차량할부 / 기타경비)
+  const catOrder = ['일반','카드값','차량할부','기타경비'];
+  const catLabel = { '일반':'📦 일반 매입', '카드값':'💳 카드값', '차량할부':'🚗 차량 할부금', '기타경비':'🧾 기타 경비' };
+  const groups = {};
+  list.forEach(x => { const c = x.category||'일반'; (groups[c]=groups[c]||[]).push(x); });
+
+  catOrder.forEach(cat => {
+    const rowsInCat = groups[cat];
+    if(!rowsInCat || !rowsInCat.length) return;
+    // 섹션 헤더 (항목명 + 그 항목 소계)
+    const catSum = rowsInCat.reduce((s,x)=>s+mpTotalOf(x),0);
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:9px 14px;background:#f1f5f9;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;position:sticky;top:0;';
+    header.innerHTML = '<span style="font-size:12px;font-weight:800;color:#334155;">'+(catLabel[cat]||cat)+' <span style="color:#94a3b8;font-weight:600;">'+rowsInCat.length+'건</span></span>'
+      + '<span style="font-size:13px;font-weight:800;color:#0d1b2a;">₩'+mpFmt(catSum)+'</span>';
+    container.appendChild(header);
+    rowsInCat.forEach(x => renderMpCard(x, container));
+  });
+  return;
+}
+
+// 매입 카드 하나 렌더 (기존 로직 분리)
+function renderMpCard(x, container){
+  {
+    const idx = 0;
     const card = document.createElement('div');
     card.style.cssText = 'padding:12px 14px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;';
 
@@ -12835,7 +12861,7 @@ function mpRender(){
     card.querySelector('[data-edit]').addEventListener('click', () => mpEdit(x.id));
     card.querySelector('[data-del]').addEventListener('click', () => mpDel(x.id));
     container.appendChild(card);
-  });
+  }
 }
 
 /* 지급 추가 (부분 지급 지원) */
