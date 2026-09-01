@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CA · 매입구분</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CB · 매입항목분리</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -9762,6 +9762,14 @@ document.addEventListener('DOMContentLoaded', function() {
       <button id="mp-add-btn" onclick="mpAdd()" style="width:100%;padding:11px;background:#0d1b2a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:6px;">+ 매입 등록</button>
     </div>
 
+    <!-- 매입 구분 필터 탭 -->
+    <div style="display:flex;gap:5px;margin-bottom:6px;overflow-x:auto;">
+      <button class="mp-cat-filter" onclick="mpFilterCategory(this,'')" style="flex:1;min-width:56px;padding:8px 6px;background:#0d1b2a;color:#fff;border:1px solid #0d1b2a;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">전체</button>
+      <button class="mp-cat-filter" onclick="mpFilterCategory(this,'일반')" style="flex:1;min-width:56px;padding:8px 6px;background:#fff;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">일반</button>
+      <button class="mp-cat-filter" onclick="mpFilterCategory(this,'카드값')" style="flex:1;min-width:64px;padding:8px 6px;background:#fff;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">💳 카드값</button>
+      <button class="mp-cat-filter" onclick="mpFilterCategory(this,'차량할부')" style="flex:1;min-width:72px;padding:8px 6px;background:#fff;color:#6b7280;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;">🚗 차량할부</button>
+    </div>
+
     <!-- 필터 (컴팩트) -->
     <div style="background:#fff;border-radius:8px;padding:7px;margin-bottom:6px;">
       <!-- 월별 빠른 이동 -->
@@ -12564,6 +12572,16 @@ function mpDel(id){
   if(typeof logAction === 'function' && x) logAction('삭제', '매입', `${x.type||''} · ${x.vendor||'-'} ₩${mpFmt(x.amount||0)}`);
 }
 
+var mpCatFilter = '';
+function mpFilterCategory(btn, cat){
+  mpCatFilter = cat;
+  document.querySelectorAll('.mp-cat-filter').forEach(b => {
+    if(b === btn){ b.style.background='#0d1b2a'; b.style.color='#fff'; b.style.border='1px solid #0d1b2a'; b.style.fontWeight='700'; }
+    else { b.style.background='#fff'; b.style.color='#6b7280'; b.style.border='1px solid #e5e7eb'; b.style.fontWeight='600'; }
+  });
+  mpRender();
+}
+
 function mpFilterType(btn, type){
   mpTypeFilter = type;
   document.querySelectorAll('.mp-type-filter').forEach(b => {
@@ -12637,6 +12655,10 @@ function mpGetFiltered(){
   const to   = document.getElementById('mp-to')?.value||'';
   return mpGet().filter(x => {
     if(mpTypeFilter && x.type !== mpTypeFilter) return false;
+    if(mpCatFilter){
+      const c = x.category || '일반';
+      if(c !== mpCatFilter) return false;
+    }
     const d = x.date || '';
     if(from && d && d < from) return false;
     if(to   && d && d > to  ) return false;
