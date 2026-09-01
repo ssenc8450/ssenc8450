@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CC · 매입항목별정리</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CD · 독촉문자수정</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -6900,29 +6900,27 @@ function openDunningMessage(clientName){
 }
 
 function generateDunningMsg(clientName, round){
-  // 데이터 다시 수집
-  let claims = [], payments = [];
-  try { claims = JSON.parse(localStorage.getItem('ssenc_giseong')||'[]'); } catch(e){}
-  try { payments = JSON.parse(localStorage.getItem('ssenc_payments')||'[]'); } catch(e){}
-
-  const cliClaims = claims.filter(c => c.client === clientName);
-  const cliPayments = payments.filter(p => cliClaims.some(c => c.site === p.site));
+  // 매출 관리의 모든 매출(세금계산서/직접 + 기성청구)을 기반으로 — 매출 화면과 숫자 일치
+  let allRows = [];
+  try { allRows = (typeof maGetMerged === 'function') ? maGetMerged() : []; } catch(e){ allRows = []; }
+  const cliRows = allRows.filter(r => (r.client||'').trim() === clientName);
 
   const bySite = {};
-  cliClaims.forEach(c => {
-    if(!bySite[c.site]) bySite[c.site] = { site: c.site, claims: [], payments: [] };
-    bySite[c.site].claims.push(c);
+  cliRows.forEach(r => {
+    const site = r._site || r.site || '(현장미지정)';
+    if(!bySite[site]) bySite[site] = { site: site, rows: [] };
+    bySite[site].rows.push(r);
   });
-  cliPayments.forEach(p => { if(bySite[p.site]) bySite[p.site].payments.push(p); });
 
   const sites = Object.values(bySite).map(s => {
-    s.claims.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-    s.payments.sort((a,b) => (a.date||'').localeCompare(b.date||''));
-    const supplyTotal = s.claims.reduce((sum,c) => sum + (parseFloat(String(c.amount).replace(/,/g,''))||0), 0);
-    const vatTotal = supplyTotal + Math.round(supplyTotal * 0.1);
-    const paidTotal = s.payments.reduce((sum,p) => sum + (parseFloat(String(p.amount).replace(/,/g,''))||0), 0);
-    const unpaid = vatTotal - paidTotal;
-    return { ...s, supplyTotal, vatTotal, paidTotal, unpaid };
+    s.rows.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    const supplyTotal = s.rows.reduce((sum,r) => sum + (parseFloat(String(r.amount).replace(/,/g,''))||0), 0);
+    const vatTotal = Math.round(s.rows.reduce((sum,r) => sum + (parseFloat(String(r.total).replace(/,/g,'')) || (parseFloat(String(r.amount).replace(/,/g,''))||0)*1.1), 0));
+    const paidTotal = s.rows.reduce((sum,r) => { const raw = parseFloat(String(r.paidAmount).replace(/,/g,''))||0; return sum + (r._src==='기성'? Math.round(raw*1.1) : raw); }, 0);
+    const unpaid = Math.max(0, vatTotal - paidTotal);
+    const claims = s.rows;
+    const payments = s.rows.filter(r => (parseFloat(String(r.paidAmount).replace(/,/g,''))||0) > 0).map(r => { const raw = parseFloat(String(r.paidAmount).replace(/,/g,''))||0; return { date:r.date||'', amount:(r._src==='기성'? Math.round(raw*1.1):raw), note:'' }; });
+    return { site: s.site, claims, payments, supplyTotal, vatTotal, paidTotal, unpaid };
   }).filter(s => s.unpaid > 0)
     .sort((a,b) => b.unpaid - a.unpaid);
 
@@ -6959,9 +6957,10 @@ function generateDunningMsg(clientName, round){
     msg += `▶ 청구 내역 (${s.claims.length}건)\n`;
     s.claims.forEach((c, i) => {
       const amt = parseFloat(String(c.amount).replace(/,/g,''))||0;
-      const vatAmt = amt + Math.round(amt*0.1);
-      msg += `  ${i+1}. ${c.date||''} ${c.round||''}\n`;
-      msg += `     공급가액 ₩${fmt(amt)} (VAT포함 ₩${fmt(vatAmt)})\n`;
+      const tot = parseFloat(String(c.total).replace(/,/g,'')) || Math.round(amt*1.1);
+      const src = c._src === '기성' ? '[기성]' : (c._src === '홈택스' ? '[계산서]' : '[매출]');
+      msg += `  ${i+1}. ${c.date||''} ${src} ${c.item||''}\n`;
+      msg += `     공급가액 ₩${fmt(amt)} (VAT포함 ₩${fmt(tot)})\n`;
     });
     msg += `  소계: ₩${fmt(s.supplyTotal)} (VAT포함 ₩${fmt(s.vatTotal)})\n\n`;
 
