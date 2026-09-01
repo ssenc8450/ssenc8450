@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CF · 비고현장연동</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CG · 공사명추출</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -17225,6 +17225,28 @@ function maDel(id){
 }
 
 /* ── 기성 + 직접 통합 목록 ── */
+// 비고(note)에서 공사명(현장명)만 추출
+function maExtractSiteFromNote(note){
+  if(!note || !note.trim()) return '';
+  const raw = note.trim();
+  // 줄바꿈/쉼표/구분자로 조각내기
+  const parts = raw.split(/[\n,·|/]+/).map(s => s.trim()).filter(Boolean);
+  // 공사/사업/현장 등으로 끝나거나 포함하는 조각 우선
+  const siteKeywords = /(공사|사업|현장|신축|증축|개축|리모델링|정비|조성|건립|공장|아파트|빌딩|주택|상가|타워|단지)/;
+  // 제외할 조각 (대표/사업자/전화/주소 등)
+  const skip = /(대표|사업자|등록번호|전화|연락처|주소|담당|계좌|은행|팩스|이메일|@)/;
+  // 1) 공사명 키워드가 있고 제외어가 없는 조각
+  for(const p of parts){
+    if(siteKeywords.test(p) && !skip.test(p)) return p;
+  }
+  // 2) 제외어 없는 첫 조각
+  for(const p of parts){
+    if(!skip.test(p)) return p;
+  }
+  // 3) 그래도 없으면 전체
+  return raw;
+}
+
 function maGetMerged(){
   const rows = [];
   // 기성청구 (실시간 읽기 → 자동 연동)
@@ -17279,8 +17301,8 @@ function maGetMerged(){
     // 안전장치: 합계(VAT포함)는 공급가액보다 작을 수 없음 → 잘못 저장된 값 보정
     if(total < sup) total = sup + vat;
     // 직접/홈택스 매출의 미수는 실제 받을 금액(VAT포함 합계) 기준
-    // 세금계산서(직접) 매출은 현장명이 비어있으면 비고(note)를 현장명으로 사용
-    const _siteVal = (m.site && m.site.trim()) ? m.site.trim() : ((m.note && m.note.trim()) ? m.note.trim() : '');
+    // 세금계산서(직접) 매출은 현장명이 비어있으면 비고(note)에서 공사명을 현장명으로 추출
+    const _siteVal = (m.site && m.site.trim()) ? m.site.trim() : maExtractSiteFromNote(m.note);
     rows.push({ id:m.id, _src:(m.source||'직접'), _readonly:false, _site:_siteVal,
       date:m.date||'', client:m.client||'', site:_siteVal, item:m.item||'',
       amount:sup, vat:vat, total:total, billable:total,
