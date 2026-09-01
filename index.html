@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-BZ · 매입부가세포함</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CA · 매입구분</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -9728,6 +9728,15 @@ document.addEventListener('DOMContentLoaded', function() {
         <input id="mp-date" type="date" style="padding:6px 4px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:11px;outline:none;box-sizing:border-box;"/>
         <input id="mp-vendor" placeholder="거래처명" style="padding:6px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:11px;outline:none;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif;"/>
       </div>
+      <!-- 매입 구분 -->
+      <div style="margin-bottom:6px;">
+        <select id="mp-category" onchange="mpCategoryChanged()" style="width:100%;padding:7px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;outline:none;box-sizing:border-box;background:#fff;font-family:'Noto Sans KR',sans-serif;">
+          <option value="일반">일반 매입 (부가세 포함)</option>
+          <option value="카드값">💳 카드값 (부가세 없음)</option>
+          <option value="차량할부">🚗 차량 할부금 (부가세 없음)</option>
+          <option value="기타경비">기타 경비 (부가세 없음)</option>
+        </select>
+      </div>
 
       <!-- 품목 헤더 + 추가 버튼 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:6px;">
@@ -12347,6 +12356,30 @@ function mpToNum(s){ return parseFloat(String(s).replace(/,/g,''))||0; }
 
 var mpItems = [];
 
+// 카드값·차량할부·기타경비는 부가세 없음, 일반은 부가세 포함
+function mpIsVatFree(x){
+  const cat = (x && x.category) || '일반';
+  return cat === '카드값' || cat === '차량할부' || cat === '기타경비';
+}
+// 매입 총액 (구분에 따라 부가세 포함/미포함)
+function mpTotalOf(x){
+  const supply = mpToNum(x.amount);
+  return mpIsVatFree(x) ? supply : Math.round(supply * 1.1);
+}
+// 구분 선택 시 VAT 표시 토글
+function mpCategoryChanged(){
+  const cat = document.getElementById('mp-category')?.value || '일반';
+  const vatFree = (cat === '카드값' || cat === '차량할부' || cat === '기타경비');
+  const vatRow = document.getElementById('mp-items-total-vat');
+  if(vatRow){
+    const wrap = vatRow.closest('div');
+    if(wrap) wrap.style.display = vatFree ? 'none' : 'flex';
+  }
+  const supplyLabel = document.querySelector('#mp-items-total')?.previousElementSibling;
+  if(supplyLabel && vatFree) supplyLabel.textContent = '금액';
+  else if(supplyLabel) supplyLabel.textContent = '공급가액';
+}
+
 function mpAddItemRow(){
   mpItems.push({name:'', qty:1, price:0});
   mpRenderItems();
@@ -12459,6 +12492,7 @@ function mpBuildSuggestions(){
 
 function mpAdd(){
   const type   = '매입';
+  const category = document.getElementById('mp-category')?.value || '일반';
   const date   = document.getElementById('mp-date').value;
   const vendor = document.getElementById('mp-vendor').value.trim();
   const note   = document.getElementById('mp-note').value.trim();
@@ -12479,7 +12513,7 @@ function mpAdd(){
   if(editId){
     const idx = list.findIndex(x => x.id === editId);
     if(idx >= 0){
-      list[idx] = {...list[idx], type, date, site, vendor, item:itemName, amount:total, items:itemsSnapshot, note, updatedAt: Date.now()};
+      list[idx] = {...list[idx], type, category, date, site, vendor, item:itemName, amount:total, items:itemsSnapshot, note, updatedAt: Date.now()};
     }
     window._mpEditingId = null;
     const btn = document.getElementById('mp-add-btn');
@@ -12487,7 +12521,7 @@ function mpAdd(){
   } else {
     list.push({
       id: Date.now() + '_' + Math.random().toString(36).slice(2,6),
-      type, date, site, vendor, item:itemName, amount:total, items:itemsSnapshot, note,
+      type, category, date, site, vendor, item:itemName, amount:total, items:itemsSnapshot, note,
       createdAt: Date.now()
     });
   }
@@ -12719,7 +12753,7 @@ function mpRender(){
     const card = document.createElement('div');
     card.style.cssText = 'padding:12px 14px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;';
 
-    const amt     = Math.round(mpToNum(x.amount) * 1.1);   // 부가세 포함 총액
+    const amt     = mpTotalOf(x);   // 구분에 따라 부가세 포함/미포함
     const paidAmt = mpToNum(x.paidAmount);
     const remain  = Math.max(0, amt - paidAmt);
     const status  = paidAmt <= 0 ? 'unpaid' : (paidAmt >= amt ? 'full' : 'partial');
@@ -12752,14 +12786,17 @@ function mpRender(){
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
           ${paidBadge}
+          ${(x.category && x.category!=='일반')?`<span style="font-size:9px;font-weight:700;color:#fff;background:#7c3aed;padding:2px 8px;border-radius:4px;white-space:nowrap;">${x.category==='카드값'?'💳 카드값':x.category==='차량할부'?'🚗 차량할부':x.category}</span>`:''}
           <span style="font-size:11px;color:#6b7280;">${x.date||''}</span>
           ${(x.items&&x.items.length>1)?`<span style="font-size:10px;color:#6b7280;font-weight:600;">📦 ${x.items.length}개 품목</span>`:''}
         </div>
         <div style="font-size:13px;font-weight:700;color:#0d1b2a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${x.vendor||'-'} ${x.item?' · '+x.item:''}</div>
         ${x.note?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">${x.note}</div>`:''}
         <div style="display:flex;gap:10px;align-items:baseline;margin-top:4px;flex-wrap:wrap;">
-          <div><span style="font-size:9px;color:#6b7280;">공급</span> <span style="font-size:12px;font-weight:700;color:#374151;">₩${mpFmt(x.amount)}</span></div>
-          <div><span style="font-size:9px;color:#6b7280;">VAT포함</span> <span style="font-size:14px;font-weight:800;color:#111827;">₩${mpFmt(Math.round(amt*1.1))}</span></div>
+          ${mpIsVatFree(x)
+            ? `<div><span style="font-size:9px;color:#6b7280;">금액</span> <span style="font-size:14px;font-weight:800;color:#111827;">₩${mpFmt(amt)}</span></div>`
+            : `<div><span style="font-size:9px;color:#6b7280;">공급</span> <span style="font-size:12px;font-weight:700;color:#374151;">₩${mpFmt(x.amount)}</span></div>
+               <div><span style="font-size:9px;color:#6b7280;">VAT포함</span> <span style="font-size:14px;font-weight:800;color:#111827;">₩${mpFmt(amt)}</span></div>`}
           ${status === 'partial' ? `<div><span style="font-size:9px;color:#dc2626;">잔액</span> <span style="font-size:12px;font-weight:800;color:#dc2626;">₩${mpFmt(remain)}</span></div>` : ''}
         </div>
         ${historyHTML}
@@ -12786,7 +12823,7 @@ function mpAddPayment(id){
   if(!x) return;
 
   const supply = mpToNum(x.amount);
-  const amt = Math.round(supply * 1.1);   // 부가세 포함 총액
+  const amt = mpTotalOf(x);   // 구분에 따라 부가세 포함/미포함
   const paidAmt = mpToNum(x.paidAmount);
   const remain = Math.max(0, amt - paidAmt);
 
