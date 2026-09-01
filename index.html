@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CD · 독촉문자수정</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CE · 독촉매출연동</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -6805,6 +6805,65 @@ function addPartItem(partKey, name='', unit='', qty='', price=''){
    📨 미수금 독촉 메시지 자동 생성 (1차/2차/3차)
    ═══════════════════════════════════════════════════════════ */
 function openDunningMessage(clientName){
+  if(!clientName){ alert('거래처를 선택해주세요.'); return; }
+
+  // 매출 관리의 모든 매출(세금계산서/직접 + 기성) 기준으로 확인
+  let allRows = [];
+  try { allRows = (typeof maGetMerged === 'function') ? maGetMerged() : []; } catch(e){ allRows = []; }
+  const cliRows = allRows.filter(r => (r.client||'').trim() === clientName);
+
+  if(cliRows.length === 0){
+    alert(`${clientName}의 매출(청구) 내역이 없습니다.`);
+    return;
+  }
+  // 미수금 계산 (부가세 포함 기준)
+  const totalUnpaid = cliRows.reduce((s,r) => {
+    const tot = parseFloat(String(r.total).replace(/,/g,'')) || Math.round((parseFloat(String(r.amount).replace(/,/g,''))||0)*1.1);
+    const raw = parseFloat(String(r.paidAmount).replace(/,/g,''))||0;
+    const paid = (r._src === '기성') ? Math.round(raw*1.1) : raw;
+    return s + Math.max(0, tot - paid);
+  }, 0);
+  if(totalUnpaid <= 0){
+    alert(`${clientName} 거래처는 현재 미수금이 없습니다. ✅\n모든 청구 금액이 입금 완료되었습니다.`);
+    return;
+  }
+
+  // 모달 열고 1차 독촉 생성
+  let modal = document.getElementById('dunningMsgModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'dunningMsgModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999999;display:flex;align-items:flex-start;justify-content:center;padding:14px;padding-top:30px;font-family:\'Noto Sans KR\',sans-serif;';
+    modal.onclick = (e) => { if(e.target === modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.style.display = 'flex';
+  window._dunningClient = clientName;
+  const fmt0 = n => Math.round(n).toLocaleString('ko-KR');
+  modal.innerHTML =
+    '<div style="background:#fff;width:100%;max-width:440px;border-radius:14px;overflow:hidden;max-height:90vh;display:flex;flex-direction:column;" onclick="event.stopPropagation()">'
+    + '<div style="background:#dc2626;padding:13px 16px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">'
+    +   '<div style="font-size:14px;font-weight:800;">📨 미수금 독촉 — ' + clientName + '</div>'
+    +   '<button onclick="document.getElementById(\'dunningMsgModal\').style.display=\'none\'" style="width:30px;height:30px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:50%;font-size:16px;cursor:pointer;">×</button>'
+    + '</div>'
+    + '<div style="padding:14px 16px;overflow-y:auto;">'
+    +   '<div style="font-size:12px;color:#374151;margin-bottom:6px;">현재 미수금: <b style="color:#dc2626;">₩' + fmt0(totalUnpaid) + '</b></div>'
+    +   '<div style="display:flex;gap:6px;margin-bottom:10px;">'
+    +     '<button class="dunning-round-btn" data-round="1" onclick="generateDunningMsg(\'' + clientName.replace(/'/g,"\\'") + '\',1)" style="flex:1;padding:8px;background:#0d1b2a;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">1차 독촉</button>'
+    +     '<button class="dunning-round-btn" data-round="2" onclick="generateDunningMsg(\'' + clientName.replace(/'/g,"\\'") + '\',2)" style="flex:1;padding:8px;background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">2차 독촉</button>'
+    +     '<button class="dunning-round-btn" data-round="3" onclick="generateDunningMsg(\'' + clientName.replace(/'/g,"\\'") + '\',3)" style="flex:1;padding:8px;background:#fff;color:#374151;border:1px solid #e5e7eb;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;">3차 독촉</button>'
+    +   '</div>'
+    +   '<textarea id="dunning-msg-text" rows="18" style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;font-family:\'Noto Sans KR\',sans-serif;outline:none;resize:vertical;box-sizing:border-box;line-height:1.6;background:#fafafa;"></textarea>'
+    +   '<div style="display:flex;gap:6px;margin-top:10px;">'
+    +     '<button onclick="var t=document.getElementById(\'dunning-msg-text\'); t.select(); document.execCommand(\'copy\'); alert(\'복사되었습니다.\');" style="flex:1;padding:11px;background:#0d1b2a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">📋 복사</button>'
+    +     '<button onclick="var t=document.getElementById(\'dunning-msg-text\').value; window.location.href=\'sms:?body=\'+encodeURIComponent(t);" style="flex:1;padding:11px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">💬 문자 보내기</button>'
+    +   '</div>'
+    + '</div></div>';
+  if(typeof generateDunningMsg === 'function') generateDunningMsg(clientName, 1);
+  return;
+}
+
+function openDunningMessageOLD(clientName){
   if(!clientName){ alert('거래처를 선택해주세요.'); return; }
 
   // 데이터 수집
