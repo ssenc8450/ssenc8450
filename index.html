@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CG · 공사명추출</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CH · 비고현장저장</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -17819,6 +17819,7 @@ function maParseHometaxRows(rows){
   const cTax    = find(['세액']);
   const cItem   = find(['품목','품명']);
   const cQty    = find(['수량']);
+  const cBigo   = find(['비고']);   // 비고란 = 현장명(공사명)
 
   // 공급가액 컬럼을 못 찾으면 임의 추측하지 않고 중단 (오금액 방지)
   if(cSupply < 0){
@@ -17838,6 +17839,7 @@ function maParseHometaxRows(rows){
     const client = String(gi(r, cName)||'').trim();
     const rep    = String(gi(r, cRep)||'').trim();
     const item   = String(gi(r, cItem)||'').trim();
+    const bigo   = String(gi(r, cBigo)||'').trim();   // 비고 = 현장명
     const qtyRaw = String(gi(r, cQty)||'').replace(/,/g,'').trim();
     const qty    = qtyRaw ? (parseFloat(qtyRaw)||1) : 1;
     const supply = parseFloat(String(gi(r, cSupply)||'0').replace(/,/g,'')) || 0;
@@ -17848,7 +17850,7 @@ function maParseHometaxRows(rows){
     const total  = supply + tax;
 
     if(!client && supply === 0) continue;
-    parsed.push({ date, client, rep, item, qty, supply, tax, total });
+    parsed.push({ date, client, rep, item, bigo, qty, supply, tax, total });
   }
 
   if(parsed.length === 0){ alert('가져올 데이터가 없습니다.'); return; }
@@ -17930,12 +17932,13 @@ function maConfirmImport(){
       date: p.date,
       client: p.client,
       rep: p.rep,
+      site: p.bigo || '',      // 비고란 = 현장명(공사명)
       item: p.item || '(품목)',
       amount: p.supply,        // 공급가액 (엑셀 실제값)
       vatAmount: p.tax,        // 세액 (엑셀 실제값)
       totalAmount: p.total,    // 합계금액 VAT포함 (엑셀 실제값 — 계산으로 덮어쓰지 않음)
       items: itemsSnapshot,
-      note: p.rep ? ('대표: '+p.rep) : '',
+      note: p.bigo || (p.rep ? ('대표: '+p.rep) : ''),   // 비고를 메모에도 보존
       createdAt: Date.now()
     });
     added++;
