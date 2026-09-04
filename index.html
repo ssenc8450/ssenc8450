@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CI · 현장명정리</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CJ · 날짜시간대수정</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2176,7 +2176,7 @@ function openContactLogModal(clientName){
     document.body.appendChild(modal);
   }
   const logs = getContactLog(clientName);
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const typeColors = { '통화':'#0d1b2a', '문자':'#374151', '미팅':'#6b7280', '이메일':'#9ca3af', '카카오톡':'#4b5563', '기타':'#9ca3af' };
 
   modal.innerHTML = `
@@ -2327,7 +2327,7 @@ function openQuickRegister(){
     modal.onclick = (e) => { if(e.target === modal) modal.style.display = 'none'; };
     document.body.appendChild(modal);
   }
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   modal.innerHTML = `
     <div style="background:#fff;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;border-radius:14px;padding:18px;" onclick="event.stopPropagation()">
       <div style="font-size:16px;font-weight:800;color:#0d1b2a;margin-bottom:14px;display:flex;align-items:center;gap:8px;">⚡ 빠른 등록</div>
@@ -4726,7 +4726,7 @@ async function fetchWeatherFor(site, date){
     }).catch(()=>{});
   }
   const ymd = isoDate(date);
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   // 14일 이상 과거면 archive, 그 외엔 forecast (forecast가 더 빠름)
   const isPast = ymd < today;
   const daysDiff = Math.floor((new Date(today) - new Date(ymd))/86400000);
@@ -5673,7 +5673,7 @@ function generateReport() {
   const html='<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>'+site.name+'</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;padding:20px;color:#222}h1{font-size:20px;font-weight:800;margin-bottom:4px}.meta{font-size:12px;color:#888;margin-bottom:16px}.sum{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}.sc{background:#f4f7ff;border-radius:8px;padding:10px 14px}.sc .v{font-size:20px;font-weight:800;color:#2563eb}.sc .l{font-size:11px;color:#888}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #e5e7eb;padding:6px 8px;text-align:center;white-space:nowrap}th{background:#2563eb;color:#fff}th:first-child{background:#1e40af}tr:nth-child(even)td{background:#f9fafb}.lc{text-align:left;font-weight:600;background:#f0f4ff!important;color:#1e40af}.footer{margin-top:12px;font-size:11px;color:#aaa;text-align:right}@media print{button{display:none}}</style></head><body><h1>'+site.name+'</h1><div class="meta">생성: '+now+'</div><div class="sum"><div class="sc"><div class="v">'+site.records.length+'</div><div class="l">총 기록</div></div><div class="sc"><div class="v">'+dates.length+'</div><div class="l">날짜</div></div><div class="sc"><div class="v">'+labels.length+'</div><div class="l">계측기</div></div></div><div style="overflow-x:auto"><table><thead><tr><th>계측기</th>'+thDates+'</tr></thead><tbody>'+rows+'</tbody></table></div><div class="footer">현장 관리 Pro</div><br><button onclick="window.print()" style="padding:10px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;">인쇄 / PDF 저장</button></body></html>';
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=site.name+'_보고서_'+new Date().toISOString().slice(0,10)+'.html'; a.click();
+  const a=document.createElement('a'); a.href=url; a.download=site.name+'_보고서_'+(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})()+'.html'; a.click();
   showToast('보고서 생성 완료!');
 }
 
@@ -5717,7 +5717,7 @@ function renderHeatmap() {
 
   const firstDay = new Date(y, m, 1).getDay(); // 0=일
   const lastDate = new Date(y, m+1, 0).getDate();
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const maxRec = Math.max(1, ...Object.values(recMap));
 
   // 빈 칸 채우기
@@ -6096,7 +6096,7 @@ function renderDashboard() {
 
   $('dashboardCard').style.display = 'block';
 
-  const today     = new Date().toISOString().slice(0,10);
+  const today     = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const thisMonth = today.slice(0,7);
   const cards     = $('dashSiteCards');
   cards.innerHTML = '';
@@ -6167,15 +6167,15 @@ function renderDashboard() {
           ? [...site.dates].sort((a,b)=>b.localeCompare(a))[0] : null;
         const lastDateStr = lastDate ? lastDate.replace(/\//g,'-') : null;
         const daysDiff   = lastDateStr
-          ? Math.floor((new Date(today)-new Date(lastDateStr))/86400000) : null;
+          ? Math.round((new Date(today+'T12:00:00')-new Date(lastDateStr+'T12:00:00'))/86400000) : null;
         const monthRecs  = site.records.filter(r=>r.date.replace(/\//g,'-').startsWith(thisMonth)).length;
         const meters     = new Set(site.records.map(r=>r.label.split(' ')[0]));
 
         let statusColor='#10b981', statusText='정상';
         if      (daysDiff===null)  { statusColor='#94a3b8'; statusText='미시작'; }
+        else if (daysDiff<=0)      { statusColor='#2563eb'; statusText='오늘'; }
         else if (daysDiff>14)      { statusColor='#ef4444'; statusText=daysDiff+'일 전'; }
         else if (daysDiff>7)       { statusColor='#f59e0b'; statusText=daysDiff+'일 전'; }
-        else if (daysDiff===0)     { statusColor='#2563eb'; statusText='오늘'; }
         else                       {                        statusText=daysDiff+'일 전'; }
 
         const card = document.createElement('div');
@@ -6216,7 +6216,7 @@ function applyDashSearch(){ renderDashboard(); }
 function updateBackupModalInfo() {
   const lastBackup = localStorage.getItem('lastBackupDate');
   const intervalDays = parseInt(localStorage.getItem('backupIntervalDays') || '7');
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 
   let infoText = lastBackup
     ? '마지막 백업: ' + lastBackup + ' (' + Math.floor((new Date(today)-new Date(lastBackup))/86400000) + '일 전)'
@@ -6247,7 +6247,7 @@ function checkBackupAlert() {
     }
     return;
   }
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const daysDiff = Math.floor((new Date(today)-new Date(lastBackup))/86400000);
   if (daysDiff >= intervalDays) {
     showBackupAlert('마지막 백업이 ' + daysDiff + '일 됐어요. 백업을 권장해요.');
@@ -6267,7 +6267,7 @@ function doBackup() {
 
   if (!doJson && !doCsv && !doHtml) { showToast('형식을 하나 이상 선택하세요.'); return; }
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 
   // JSON
   if (doJson) {
@@ -8104,7 +8104,7 @@ function copyQuote(editId){
   // 새 ID 생성
   copied._editId = 'q_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
   copied.savedAt = new Date().toLocaleString('ko-KR');
-  copied.quoteDate = new Date().toISOString().slice(0,10);
+  copied.quoteDate = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 
   // 견적명에 "_복사" 자동 추가 (중복 방지)
   const baseName = q.projectName || '(무제)';
@@ -8325,7 +8325,7 @@ function openContractFromQuote(editId){
     document.body.appendChild(modal);
   }
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const oneMonthLater = (() => {
     const d = new Date(); d.setMonth(d.getMonth()+1);
     return d.toISOString().slice(0,10);
@@ -9371,7 +9371,7 @@ function bindTel(id) {
 
 function quoteInit(){
   currentEditId = null;
-  document.getElementById('quoteDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('quoteDate').value=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   // 회사 정보(회사명/대표자/주소)를 현재 선택된 회사 기준으로 초기화
   const _co = (typeof getCurrentCompany === 'function') ? getCurrentCompany() : null;
   if(_co){
@@ -10706,7 +10706,7 @@ function gsUpdateSummary(){
 }
 
 function gsInit(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const dateEl = document.getElementById('gc-date');
   const pdateEl = document.getElementById('gp-date');
   if(dateEl) dateEl.value = today;
@@ -12520,7 +12520,7 @@ function mpRenderItems(){
 }
 
 function mpInit(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const dEl = document.getElementById('mp-date');
   if(dEl && !dEl.value) dEl.value = today;
   mpItems = [];
@@ -12948,7 +12948,7 @@ function mpAddPayment(id){
     modal.onclick = (e)=>{ if(e.target===modal) mpPayClose(); };
     document.body.appendChild(modal);
   }
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   modal.innerHTML =
     '<div style="background:#fff;width:100%;max-width:380px;border-radius:14px;overflow:hidden;" onclick="event.stopPropagation()">'
     + '<div style="background:#0d1b2a;padding:13px 16px;color:#fff;display:flex;justify-content:space-between;align-items:center;">'
@@ -12994,7 +12994,7 @@ function mpPayConfirm(){
   if(!ctx) return;
   const payAmt = mpToNum((document.getElementById('mpPayAmount')||{}).value || '0');
   if(payAmt <= 0){ alert('지급 금액을 입력해주세요.'); return; }
-  const payDate = (document.getElementById('mpPayDate')||{}).value || new Date().toISOString().slice(0,10);
+  const payDate = (document.getElementById('mpPayDate')||{}).value || (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const memo = ((document.getElementById('mpPayMemo')||{}).value || '').trim();
   const actualPay = Math.min(payAmt, ctx.remain);
 
@@ -14240,7 +14240,7 @@ function gsCloneClaim(id){
 
   if(!confirm(`📋 [${src.site||''}] ${src.round||''} 청구를 복제할까요?\n\n• 같은 항목·금액으로 새 청구가 만들어집니다\n• 회수는 +1, 청구일은 오늘로 변경\n• 진행 수량은 0으로 초기화 (새로 입력)`)) return;
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
 
   // 회수 자동 증가 (숫자가 있으면 +1, 없으면 그대로)
   let newRound = src.round || '';
@@ -15616,7 +15616,7 @@ function saveBackupFileQuietly(){
 // 주 1회(7일마다) 파일 자동 저장 체크
 function checkFileBackup(){
   try {
-    const today = new Date().toISOString().slice(0,10);
+    const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
     const last = localStorage.getItem(FILE_BACKUP_KEY) || '';
     if(last === today) return;
     let need = false;
@@ -16536,7 +16536,7 @@ function gsOpenBackup(){
 }
 
 function gsDoBackup(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const data = { _version:1, _date:today };
   GS_ALL_KEYS.forEach(k => {
     const raw = localStorage.getItem(k);
@@ -16659,7 +16659,7 @@ function hdFillDatalists(){
 }
 function hdInit(){
   var d = document.getElementById('hd-date');
-  if(d && !d.value){ d.value = new Date().toISOString().slice(0,10); }
+  if(d && !d.value){ d.value = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(); }
   hdFillDatalists();
   hdRender();
 }
@@ -16715,7 +16715,7 @@ function hdAdd(){
   }
   var rec = {
     id: 'h'+Date.now(),
-    date: document.getElementById('hd-date').value || new Date().toISOString().slice(0,10),
+    date: document.getElementById('hd-date').value || (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(),
     client: client,
     site: site,
     amount: sup,
@@ -16933,7 +16933,7 @@ function hdPrintPdf(){
   var docHtml = ''
     + '<div class="hdpdf-doc" style="padding:16px;font-family:sans-serif;color:#222 !important;background:#fff;font-size:12px;">'
     + '<h1 style="font-size:20px;margin:0 0 4px;">🧾 하도정산 내역서</h1>'
-    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">'+coName+' · 조건: '+statLabel+(fMonth?(' · '+fMonth):'')+(fSite?(' · '+fSite):'')+' · 출력일 '+new Date().toISOString().slice(0,10)+'</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">'+coName+' · 조건: '+statLabel+(fMonth?(' · '+fMonth):'')+(fSite?(' · '+fSite):'')+' · 출력일 '+(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})()+'</div>'
     + '<table style="border-collapse:collapse;width:100%;"><thead><tr>'
     +   '<th style="border:1px solid #ccc;padding:5px;background:#0d1b2a;color:#fff;font-size:11px;">상태</th>'
     +   '<th style="border:1px solid #ccc;padding:5px;background:#0d1b2a;color:#fff;font-size:11px;">날짜</th>'
@@ -17010,7 +17010,7 @@ function hdExportExcel(){
   var wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, '하도정산');
 
-  var today = new Date().toISOString().slice(0,10);
+  var today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   var fname = '하도정산_'+(coName||'')+'_'+statLabel+(fMonth?('_'+fMonth):'')+'_'+today+'.xlsx';
   fname = fname.replace(/[\\\/:*?"<>|]/g,'');
   try {
@@ -17119,7 +17119,7 @@ function maRenderItems(){
 }
 
 function maInit(){
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const dEl = document.getElementById('ma-date');
   if(dEl && !dEl.value) dEl.value = today;
   maItems = [];
@@ -17603,7 +17603,7 @@ function maReceive(id){
     modal.onclick = (e)=>{ if(e.target===modal) maReceiveClose(); };
     document.body.appendChild(modal);
   }
-  const today = new Date().toISOString().slice(0,10);
+  const today = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   modal.innerHTML =
     '<div style="background:#fff;width:100%;max-width:380px;border-radius:14px;overflow:hidden;" onclick="event.stopPropagation()">'
     + '<div style="background:#0d1b2a;padding:13px 16px;color:#fff;display:flex;justify-content:space-between;align-items:center;">'
@@ -17650,7 +17650,7 @@ function maReceiveConfirm(){
   if(!ctx){ return; }
   const payAmt = maToNum((document.getElementById('maRcvAmount')||{}).value || '0');
   if(payAmt <= 0){ alert('수금 금액을 입력해주세요.'); return; }
-  const payDate = (document.getElementById('maRcvDate')||{}).value || new Date().toISOString().slice(0,10);
+  const payDate = (document.getElementById('maRcvDate')||{}).value || (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const memo = ((document.getElementById('maRcvMemo')||{}).value || '').trim();
   const actualPay = Math.min(payAmt, ctx.remain);
 
@@ -18214,7 +18214,7 @@ function todoRender(){
     box.innerHTML = '<div style="text-align:center;padding:14px;color:rgba(255,255,255,0.4);font-size:12px;">할 일이 없습니다. 위에 입력해보세요.</div>';
     return;
   }
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   box.innerHTML = list.map(t=>{
     let dateTag = '';
     if(t.date){
@@ -18299,7 +18299,7 @@ function calRender(){
   const first = new Date(calYear, calMonth, 1);
   const startDay = first.getDay(); // 0=일
   const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const todayStr = new Date().toISOString().slice(0,10);
+  const todayStr = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const pad = n => (n<10?'0':'')+n;
 
   let cells = '';
