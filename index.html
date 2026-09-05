@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CJ · 날짜시간대수정</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CK · 사진실제테스트</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -5074,6 +5074,9 @@ function showStorageUsage(){
           <button onclick="photoSyncDiag()" style="flex:1;padding:11px;background:#111827;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🔎 사진 동기화 점검</button>
         </div>
         <div style="display:flex;gap:6px;margin-top:8px;">
+          <button onclick="photoLiveTest()" style="flex:1;padding:11px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🧪 사진 업로드 실제 테스트</button>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
           <button onclick="cleanupOldVersion()" style="flex:1;padding:11px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🧹 구버전 정리</button>
           <button onclick="cleanupOldPhotos()" style="flex:1;padding:11px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">🖼 오래된 사진 정리</button>
         </div>
@@ -5189,6 +5192,56 @@ async function pullPhotosFromCloud(){
     setTimeout(()=> location.reload(), 800);
   } catch(e){
     alert('❌ 사진 가져오기 실패\n' + (e.message||e));
+  }
+}
+
+// 🧪 사진 업로드→클라우드 저장→확인까지 실제로 테스트
+async function photoLiveTest(){
+  const steps = [];
+  try {
+    // 1. 로그인 확인
+    if(!window.fbReady){ alert('❌ Firebase가 아직 준비 안 됨. 잠시 후 다시.'); return; }
+    steps.push('① Firebase 준비 ✅');
+    if(!fbSignedIn || !fbSignedIn()){ alert(steps.join('\n')+'\n❌ 로그인 안 됨. 로그인 먼저 하세요.'); return; }
+    steps.push('② 로그인 됨 ✅');
+    // 2. 작은 테스트 이미지 업로드
+    if(!window.fbUploadPhoto){ alert(steps.join('\n')+'\n❌ 업로드 함수 없음'); return; }
+    const testImg = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    let url = '';
+    try {
+      const up = await window.fbUploadPhoto(testImg);
+      url = up && up.url;
+      if(!url) throw new Error('URL 안 옴');
+      steps.push('③ Storage 업로드 ✅');
+    } catch(e){
+      alert(steps.join('\n')+'\n❌ Storage 업로드 실패\n원인: '+(e.code||e.message||e)+'\n\n→ Firebase 요금제(Blaze)와 Storage 규칙을 확인하세요.');
+      return;
+    }
+    // 3. Firestore 문서에 URL 쓰기 테스트
+    try {
+      const ref = window.fbDoc(window.fbDb, 'userdata', CLOUD_USER_ID);
+      const snap = await window.fbGetDoc(ref);
+      const cur = snap.exists() ? snap.data() : {};
+      cur._phototest = url;
+      cur._phototestAt = new Date().toISOString();
+      await window.fbSetDoc(ref, cur);
+      steps.push('④ 클라우드 문서 쓰기 ✅');
+    } catch(e){
+      alert(steps.join('\n')+'\n❌ 클라우드 문서 쓰기 실패\n원인: '+(e.code||e.message||e)+'\n\n→ Firestore 규칙을 확인하세요.');
+      return;
+    }
+    // 4. 다시 읽어서 확인
+    try {
+      const ref2 = window.fbDoc(window.fbDb, 'userdata', CLOUD_USER_ID);
+      const snap2 = await window.fbGetDoc(ref2);
+      const back = snap2.exists() ? snap2.data()._phototest : '';
+      if(back === url) steps.push('⑤ 클라우드에서 다시 읽기 ✅');
+      else steps.push('⑤ 읽기 불일치 ⚠️');
+    } catch(e){ steps.push('⑤ 읽기 실패: '+(e.code||e.message)); }
+
+    alert('🧪 사진 동기화 실제 테스트 결과\n\n'+steps.join('\n')+'\n\n✅ 모두 통과하면 이 기기는 정상입니다.\n다른 기기가 안 되면 그 기기 버전을 확인하세요(둘 다 최신이어야 함).');
+  } catch(e){
+    alert('테스트 오류: '+(e.message||e));
   }
 }
 
