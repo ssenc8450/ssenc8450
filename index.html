@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CL · 견적파일명</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CM · 파일명수정</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2617,10 +2617,20 @@ window.printDocHtml = function(doc, opts){
 
     cbtn.onclick = function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
     pbtn.onclick = function(){
+      var _origTitle = document.title;
       try {
+        // 저장 파일명 = 부모 페이지 title (시스템 인쇄가 이걸 파일명으로 사용)
+        if(opts.title){ document.title = opts.title; }
+        try { frame.contentWindow.document.title = opts.title || document.title; } catch(e){}
         frame.contentWindow.focus();
         frame.contentWindow.print();
+        // 인쇄 대화상자 닫힌 뒤 원래 제목 복구
+        setTimeout(function(){ document.title = _origTitle; }, 3000);
+        try {
+          frame.contentWindow.addEventListener('afterprint', function(){ document.title = _origTitle; });
+        } catch(e){}
       } catch(e){
+        document.title = _origTitle;
         alert('인쇄를 시작할 수 없어요: ' + (e.message || e));
       }
     };
