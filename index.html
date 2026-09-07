@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CN · PDF저장버튼</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CO · 인쇄유지</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2560,22 +2560,12 @@ window.printDocHtml = function(doc, opts){
     title.textContent = opts.title || '인쇄 미리보기';
     title.style.cssText = 'color:#fff;font-size:14px;font-weight:700;font-family:Noto Sans KR,sans-serif;margin-right:auto;';
     var pbtn = document.createElement('button');
-    pbtn.textContent = '🖨 인쇄';
+    pbtn.textContent = '🖨 인쇄 / PDF 저장';
     pbtn.style.cssText = 'padding:10px 18px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;font-family:Noto Sans KR,sans-serif;';
-    var savebtn = document.createElement('button');
-    savebtn.textContent = '📄 PDF 저장';
-    savebtn.style.cssText = 'padding:10px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:800;cursor:pointer;font-family:Noto Sans KR,sans-serif;';
-    savebtn.onclick = function(){
-      try {
-        if(typeof window.saveDocAsPDF === 'function'){
-          window.saveDocAsPDF(doc, (opts.title || '문서') + '.pdf', { landscape: !!opts.landscape });
-        } else { alert('PDF 저장 기능을 불러오지 못했어요.'); }
-      } catch(e){ alert('PDF 저장 실패: ' + (e.message||e)); }
-    };
     var cbtn = document.createElement('button');
     cbtn.textContent = '✕ 닫기';
     cbtn.style.cssText = 'padding:10px 14px;background:#4b5563;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:Noto Sans KR,sans-serif;';
-    bar.appendChild(title); bar.appendChild(savebtn); bar.appendChild(pbtn); bar.appendChild(cbtn);
+    bar.appendChild(title); bar.appendChild(pbtn); bar.appendChild(cbtn);
 
     var frame = document.createElement('iframe');
     frame.id = '__printFrame';
