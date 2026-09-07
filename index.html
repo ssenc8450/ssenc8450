@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CK · 사진실제테스트</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CL · 견적파일명</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -7686,9 +7686,15 @@ async function savePreviewAsPDF(mode){
   if(!cssText && typeof quotePrintCSS==='function') cssText = quotePrintCSS();
   if(!page1 && !page2){ alert('견적서에 입력된 내용이 없어요. 항목을 먼저 입력해주세요.'); return; }
 
+  // 파일 이름: 견적명 + 계측용역견적서
+  var projName = '';
+  try { projName = (document.getElementById('projectName')?.value || '').trim(); } catch(e){}
+  var fileTitle = (projName ? projName + ' ' : '') + '계측용역견적서';
+  fileTitle = fileTitle.replace(/[\\\/:*?"<>|]/g,'').trim();
+
   var docHtml = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">'
     + '<meta name="viewport" content="width=device-width,initial-scale=1">'
-    + '<title>견적서</title>'
+    + '<title>' + fileTitle + '</title>'
     + '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Noto+Serif+KR:wght@700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">'
     + '<style>' + cssText
     + ' @page{size:A4 portrait;margin:8mm;} html,body{margin:0;padding:0;background:#525659;}'
@@ -7700,7 +7706,7 @@ async function savePreviewAsPDF(mode){
     + '<div class="page">' + page2 + '</div>'
     + '</body></html>';
 
-  window.printDocHtml(docHtml, { title: '견적서 인쇄' });
+  window.printDocHtml(docHtml, { title: fileTitle });
 }
 function quotePrintCSS(){
   return [
