@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CO · 인쇄유지</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CP · 기성표간격</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -11301,9 +11301,9 @@ function gsPrintClaim(id){
       .gpc2 .top-tbl .val{text-align:center;font-weight:700;}
       /* ── 갑지 요약표 ── */
       .gpc2 .sm{margin-top:18px;border:1px solid #1f2a44;}
-      .gpc2 .sm th{background:#1f2a44;color:#fff;padding:11px 8px;font-size:13px;font-weight:700;border:1px solid #33405c;text-align:center;letter-spacing:1px;}
+      .gpc2 .sm th{background:#1f2a44;color:#fff;padding:12px 10px;font-size:13px;font-weight:700;border:1px solid #33405c;text-align:center;letter-spacing:1px;height:42px;box-sizing:border-box;}
       .gpc2 .sm th.cur{background:#16233f;}
-      .gpc2 .sm td{padding:12px 10px;font-size:14px;text-align:right;border:1px solid #c3c9d4;}
+      .gpc2 .sm td{padding:12px 10px;font-size:14px;text-align:right;border:1px solid #c3c9d4;height:42px;box-sizing:border-box;}
       .gpc2 .sm td.rowlbl{background:#e9edf2;text-align:center;font-weight:700;color:#374151;}
       .gpc2 .sm tr.vat td{background:#eaf0fb;}
       .gpc2 .sm td.curcol{background:#eef3fc;font-weight:800;color:#16233f;}
@@ -11323,10 +11323,10 @@ function gsPrintClaim(id){
       .gpc2 .det-top .v{font-weight:800;color:#111;margin-top:3px;font-size:13px;}
       /* ── 세부내역 품목표 ── */
       .gpc2 .det{margin-top:14px;border:1px solid #1f2a44;}
-      .gpc2 .det th{background:#1f2a44;color:#fff;padding:6px 5px;font-size:11px;font-weight:700;border:1px solid #33405c;text-align:center;line-height:1.25;}
+      .gpc2 .det th{background:#1f2a44;color:#fff;padding:8px 6px;font-size:11px;font-weight:700;border:1px solid #33405c;text-align:center;line-height:1.25;height:34px;box-sizing:border-box;}
       .gpc2 .det th.cur{background:#16233f;}
       .gpc2 .det th sub{display:block;font-weight:400;font-size:9px;color:#c9d2e3;}
-      .gpc2 .det td{border:1px solid #c3c9d4;padding:4px 5px;font-size:11px;text-align:center;vertical-align:middle;}
+      .gpc2 .det td{border:1px solid #c3c9d4;padding:8px 6px;font-size:11px;text-align:center;vertical-align:middle;height:34px;box-sizing:border-box;}
       .gpc2 .det td.nm{text-align:left;font-weight:700;padding-left:12px;}
       .gpc2 .det td.ct{color:#374151;}
       .gpc2 .det td.num{text-align:right;}
