@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CW · 하도총계갱신</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CX · 하도홈부가세제외</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -18771,9 +18771,9 @@ function dashFullRender(targetId){
   const soonCals = cals.filter(c => (c.date||'') >= today)
                        .sort((a,b) => (a.date||'').localeCompare(b.date||'')).slice(0,3);
 
-  // 하도 미정산
+  // 하도 미정산 (부가세 없음 — 공급가액 기준)
   const hdOpen = hados.map(h => {
-    const total = num(h.amount) + num(h.vat || Math.round(num(h.amount)*0.1));
+    const total = num(h.amount);   // 하도정산은 부가세 제외
     const rest = Math.max(0, total - num(h.paid));
     return { client:h.client||'', site:h.site||'', rest:rest, date:h.date||'' };
   }).filter(h => h.rest > 0).sort((a,b) => b.rest - a.rest);
