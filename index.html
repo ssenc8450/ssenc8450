@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CS · 하도비용차감</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CT · 비용관리</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -9967,12 +9967,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="gf"><label>합계 (VAT포함)</label><input type="text" id="hd-total" readonly style="background:#f3f4f6;"/></div>
       </div>
       <div class="gf" style="margin-top:10px;"><label>메모</label><input type="text" id="hd-note" placeholder="특이사항 (선택)"/></div>
-      <div class="gf" style="margin-top:10px;">
-        <label style="color:#b45309;font-weight:800;">💸 비용 차감 (지급에서 뺄 금액)</label>
-        <input type="text" id="hd-expense" inputmode="numeric" placeholder="0" oninput="hdOnAmount()" style="width:100%;box-sizing:border-box;border:1.5px solid #fcd34d;background:#fffbeb;"/>
-        <div style="font-size:11px;color:#9ca3af;margin-top:4px;">자재비·공제 등 지급액에서 뺄 비용 (선택)</div>
-      </div>
-      <div class="gf" style="margin-top:8px;"><label>실지급액 (합계 − 비용)</label><input type="text" id="hd-netpay" readonly style="background:#f0fdf4;color:#059669;font-weight:800;"/></div>
       <div class="gf" style="margin-top:12px;">
         <label>정산받은 금액 (VAT포함 합계 기준)</label>
         <input type="text" id="hd-paid" inputmode="numeric" placeholder="0" style="width:100%;box-sizing:border-box;"/>
@@ -10004,7 +9998,25 @@ document.addEventListener('DOMContentLoaded', function() {
       <div style="font-size:13px;font-weight:800;color:#0d1b2a;margin-bottom:10px;">📋 정산 목록 <span id="hd-count" style="color:#6b7280;font-size:11px;"></span></div>
       <div id="hd-list" style="max-width:100%;overflow-x:hidden;"></div>
     </div>
-  </div>
+
+    <!-- 💸 비용 관리 -->
+    <div style="background:#fff;border-radius:14px;padding:14px;box-shadow:0 1px 6px rgba(0,0,0,0.07);margin-top:14px;">
+      <div style="font-size:14px;font-weight:800;color:#b45309;margin-bottom:12px;">💸 비용 관리</div>
+      <div style="display:grid;grid-template-columns:130px 1fr;gap:8px;margin-bottom:8px;">
+        <input type="date" id="hx-date" style="padding:9px 8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;box-sizing:border-box;"/>
+        <input type="text" id="hx-name" placeholder="비용 항목 (예: 자재비, 교통비)" style="padding:9px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <input type="text" id="hx-amount" inputmode="numeric" placeholder="금액" style="padding:9px 10px;border:1.5px solid #fcd34d;background:#fffbeb;border-radius:8px;font-size:13px;box-sizing:border-box;font-weight:700;font-family:'Noto Sans KR',sans-serif;"/>
+        <input type="text" id="hx-memo" placeholder="메모 (선택)" style="padding:9px 10px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:'Noto Sans KR',sans-serif;"/>
+      </div>
+      <button onclick="hxAdd()" style="width:100%;padding:11px;background:#b45309;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">+ 비용 등록</button>
+      <div id="hx-list" style="margin-top:12px;max-width:100%;overflow-x:hidden;"></div>
+    </div>
+
+    <!-- 총 정산 요약 -->
+    <div id="hx-summary" style="background:#0d1b2a;border-radius:14px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,0.1);margin-top:14px;color:#fff;"></div>
+    </div>
 </div>
 
 <!-- ─────────────────────────────── -->
@@ -14959,6 +14971,8 @@ const CLOUD_USER_ID = 'ssenc8450';  // 로그인 ID와 동일하게 사용
 const CLOUD_KEYS = [
   'ssenc_giseong',
   'ssenc_payments',
+  'ssenc_hado_expense_ssenc',
+  'ssenc_hado_expense_salt',
   'ssenc_clients',
   'ssenc_clients_hidden',
   'ssenc_quotes',
@@ -16737,6 +16751,7 @@ function hdInit(){
   if(d && !d.value){ d.value = (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(); }
   hdFillDatalists();
   hdRender();
+  try { hxRender(); hdRenderSummary(); } catch(e){}
 }
 function hdOnAmount(){
   var sup = hdNum(document.getElementById('hd-amount').value);
@@ -16937,6 +16952,61 @@ function hdFiltered(){
     return true;
   }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
 }
+/* ── 💸 비용 관리 (하도정산에서 차감) ── */
+function hxKey(){ return (typeof hdKey==='function') ? hdKey().replace('ssenc_hado','ssenc_hado_expense') : 'ssenc_hado_expense'; }
+function hxGet(){ try { return JSON.parse(localStorage.getItem(hxKey())||'[]'); } catch(e){ return []; } }
+function hxSave(d){ localStorage.setItem(hxKey(), JSON.stringify(d)); try{ if(typeof autoSyncUpload==='function') autoSyncUpload(); }catch(e){} }
+function hxAdd(){
+  var name = (document.getElementById('hx-name').value||'').trim();
+  var amount = hdNum(document.getElementById('hx-amount').value);
+  if(amount<=0 && !name){ alert('비용 항목과 금액을 입력하세요.'); return; }
+  var rec = {
+    id: 'x'+Date.now(),
+    date: document.getElementById('hx-date').value || (function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})(),
+    name: name || '비용',
+    amount: amount,
+    memo: (document.getElementById('hx-memo').value||'').trim()
+  };
+  var list = hxGet(); list.push(rec); hxSave(list);
+  ['hx-name','hx-amount','hx-memo'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
+  hxRender(); hdRenderSummary();
+  if(typeof logAction==='function') logAction('등록','비용', rec.name+' ₩'+hdFmt(rec.amount));
+}
+function hxDelete(id){
+  if(!confirm('이 비용을 삭제할까요?')) return;
+  hxSave(hxGet().filter(function(x){ return x.id!==id; }));
+  hxRender(); hdRenderSummary();
+}
+function hxRender(){
+  var box = document.getElementById('hx-list'); if(!box) return;
+  var list = hxGet().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  if(!list.length){ box.innerHTML='<div style="text-align:center;padding:16px;color:#9ca3af;font-size:12px;">등록된 비용이 없습니다.</div>'; return; }
+  box.innerHTML = list.map(function(x){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid #f0e6d0;background:#fffdf7;border-radius:9px;padding:10px 12px;margin-bottom:7px;">'
+      + '<div style="min-width:0;flex:1;">'
+      +   '<div style="font-size:13px;font-weight:700;color:#78350f;word-break:break-word;">'+String(x.name).replace(/</g,'&lt;')+'</div>'
+      +   '<div style="font-size:11px;color:#9ca3af;margin-top:1px;">'+(x.date||'')+(x.memo?' · '+String(x.memo).replace(/</g,'&lt;'):'')+'</div>'
+      + '</div>'
+      + '<div style="flex:0 0 auto;font-size:14px;font-weight:800;color:#b45309;">− ₩'+hdFmt(hdNum(x.amount))+'</div>'
+      + '<button onclick="hxDelete(\''+x.id+'\')" style="flex:0 0 auto;width:26px;height:26px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;font-size:13px;cursor:pointer;">×</button>'
+      + '</div>';
+  }).join('');
+}
+// 총 정산 요약 (하도 합계 − 비용 = 순 정산액)
+function hdRenderSummary(){
+  var box = document.getElementById('hx-summary'); if(!box) return;
+  var hdList = (typeof hdGet==='function') ? hdGet() : [];
+  var hadoTotal = hdList.reduce(function(s,h){ return s + hdNum(h.amount) + hdNum(h.vat); }, 0);
+  var expList = hxGet();
+  var expTotal = expList.reduce(function(s,x){ return s + hdNum(x.amount); }, 0);
+  var net = hadoTotal - expTotal;
+  box.innerHTML =
+      '<div style="font-size:13px;font-weight:700;opacity:0.85;margin-bottom:10px;">📊 하도 정산 총계</div>'
+    + '<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="opacity:0.85;">하도 정산 합계</span><span style="font-weight:700;">₩'+hdFmt(hadoTotal)+'</span></div>'
+    + '<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;"><span style="color:#fbbf24;">− 비용 차감 ('+expList.length+'건)</span><span style="font-weight:700;color:#fbbf24;">₩'+hdFmt(expTotal)+'</span></div>'
+    + '<div style="display:flex;justify-content:space-between;padding:10px 0 2px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.2);font-size:16px;"><span style="font-weight:800;">순 정산액</span><span style="font-weight:900;color:#4ade80;">₩'+hdFmt(net)+'</span></div>';
+}
+
 function hdRender(){
   var box = document.getElementById('hd-list');
   if(!box) return;
