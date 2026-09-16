@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CU · 하도부가세제외</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CV · 하도부가세완전제외</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -16765,11 +16765,11 @@ function hdFillPaidFull(){
   var vat = hdNum(document.getElementById('hd-vat').value);
   vat = 0; // 하도정산 부가세 없음
   var paidEl = document.getElementById('hd-paid');
-  if(paidEl) paidEl.value = hdFmt(sup+vat);
+  if(paidEl) paidEl.value = hdFmt(sup);
 }
 // 정산 상태 판정: 'done'(완료) / 'partial'(일부) / 'wait'(미정산)
 function hdStatusOf(h){
-  var tot = hdNum(h.amount) + hdNum(h.vat);
+  var tot = hdNum(h.amount);  // 하도정산 부가세 제외
   var paid = hdNum(h.paid);
   if(paid <= 0) return 'wait';
   if(paid >= tot) return 'done';
@@ -16848,7 +16848,7 @@ function hdToggle(id){
   var list = hdGet();
   var r = list.find(function(x){ return x.id===id; });
   if(r){
-    var tot = hdNum(r.amount)+hdNum(r.vat);
+    var tot = hdNum(r.amount);  // 하도정산 부가세 제외
     var st = hdStatusOf(r);
     r.paid = (st==='wait') ? tot : 0;
     hdSave(list); hdRender();
@@ -16859,7 +16859,7 @@ function hdEditPaid(id){
   var list = hdGet();
   var r = list.find(function(x){ return x.id===id; });
   if(!r) return;
-  var tot = hdNum(r.amount)+hdNum(r.vat);
+  var tot = hdNum(r.amount);  // 하도정산 부가세 제외
   var already = hdNum(r.paid);
   var remain = Math.max(0, tot - already);
   window._hdPaidCtx = { id:id, tot:tot };
@@ -16990,7 +16990,7 @@ function hxRender(){
 function hdRenderSummary(){
   var box = document.getElementById('hx-summary'); if(!box) return;
   var hdList = (typeof hdGet==='function') ? hdGet() : [];
-  var hadoTotal = hdList.reduce(function(s,h){ return s + hdNum(h.amount) + hdNum(h.vat); }, 0);
+  var hadoTotal = hdList.reduce(function(s,h){ return s + hdNum(h.amount); }, 0);
   var expList = hxGet();
   var expTotal = expList.reduce(function(s,x){ return s + hdNum(x.amount); }, 0);
   var net = hadoTotal - expTotal;
@@ -17007,7 +17007,7 @@ function hdRender(){
   var all = hdGet();
   var doneSum = 0, waitSum = 0;
   all.forEach(function(h){
-    var t=hdNum(h.amount)+hdNum(h.vat);
+    var t=hdNum(h.amount);  // 하도정산 부가세 제외
     var paid=hdNum(h.paid);
     var st=hdStatusOf(h);
     if(st==='done') doneSum+=t;
@@ -17020,7 +17020,7 @@ function hdRender(){
   var cnt=document.getElementById('hd-count'); if(cnt) cnt.textContent='('+list.length+'건)';
   if(!list.length){ box.innerHTML='<div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">해당 조건의 정산 내역이 없습니다.</div>'; return; }
   box.innerHTML = list.map(function(h){
-    var sup=hdNum(h.amount), vat=hdNum(h.vat), tot=sup+vat, paid=hdNum(h.paid);
+    var sup=hdNum(h.amount), vat=0, tot=sup, paid=hdNum(h.paid);
     var st=hdStatusOf(h);
     var badge, bg;
     if(st==='done'){ badge='<span style="font-size:9px;font-weight:800;color:#fff;background:#059669;padding:2px 7px;border-radius:5px;">✓ 정산완료</span>'; bg='#f0fdf4'; }
@@ -17060,7 +17060,7 @@ function hdPrintPdf(){
   var statLabel = hdStatFilter==='done'?'정산완료':(hdStatFilter==='wait'?'미정산':'전체');
   var doneSum=0, waitSum=0, supSum=0, vatSum=0, paidSum=0;
   var rowsHtml = list.map(function(h){
-    var sup=hdNum(h.amount), vat=hdNum(h.vat), tot=sup+vat, paid=hdNum(h.paid);
+    var sup=hdNum(h.amount), vat=0, tot=sup, paid=hdNum(h.paid);
     var st=hdStatusOf(h);
     supSum+=sup; vatSum+=vat; paidSum+=paid;
     if(st==='done') doneSum+=tot; else { doneSum+=paid; waitSum+=(tot-paid); }
@@ -17132,7 +17132,7 @@ function hdExportExcel(){
 
   var supSum=0, vatSum=0, paidSum=0, doneSum=0, waitSum=0;
   var rows = list.map(function(h){
-    var sup=hdNum(h.amount), vat=hdNum(h.vat), tot=sup+vat, paid=hdNum(h.paid);
+    var sup=hdNum(h.amount), vat=0, tot=sup, paid=hdNum(h.paid);
     var st=hdStatusOf(h);
     supSum+=sup; vatSum+=vat; paidSum+=paid;
     if(st==='done') doneSum+=tot; else { doneSum+=paid; waitSum+=(tot-paid); }
