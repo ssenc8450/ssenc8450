@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CT · 비용관리</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CU · 하도부가세제외</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -9963,17 +9963,17 @@ document.addEventListener('DOMContentLoaded', function() {
       <div id="hd-recent-site" style="margin-top:6px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0;margin-top:10px;">
         <div class="gf"><label>공급가액</label><input type="text" id="hd-amount" inputmode="numeric" placeholder="0" oninput="hdOnAmount()"/></div>
-        <div class="gf"><label>부가세 (자동 10%)</label><input type="text" id="hd-vat" inputmode="numeric" placeholder="0"/></div>
-        <div class="gf"><label>합계 (VAT포함)</label><input type="text" id="hd-total" readonly style="background:#f3f4f6;"/></div>
+        <div class="gf"><label>정산 금액</label><input type="text" id="hd-total" readonly style="background:#f3f4f6;"/></div>
+        <input type="hidden" id="hd-vat" value="0"/>
       </div>
       <div class="gf" style="margin-top:10px;"><label>메모</label><input type="text" id="hd-note" placeholder="특이사항 (선택)"/></div>
       <div class="gf" style="margin-top:12px;">
-        <label>정산받은 금액 (VAT포함 합계 기준)</label>
+        <label>정산받은 금액</label>
         <input type="text" id="hd-paid" inputmode="numeric" placeholder="0" style="width:100%;box-sizing:border-box;"/>
         <div style="margin-top:6px;">
           <button type="button" onclick="hdFillPaidFull()" style="display:inline-block;width:auto;padding:7px 14px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">전액 채우기</button>
         </div>
-        <div style="font-size:11px;color:#9ca3af;margin-top:6px;">0=미정산 · 일부입력=일부정산 · 합계전액=정산완료(매출포함)</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:6px;">0=미정산 · 일부입력=일부정산 · 전액=정산완료</div>
       </div>
       <button id="hd-add-btn" onclick="hdAdd()" style="width:100%;margin-top:14px;padding:14px;background:#0d1b2a;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer;font-family:'Noto Sans KR',sans-serif;">+ 하도정산 등록</button>
     </div>
@@ -16757,19 +16757,13 @@ function hdOnAmount(){
   var sup = hdNum(document.getElementById('hd-amount').value);
   var vatEl = document.getElementById('hd-vat');
   var totEl = document.getElementById('hd-total');
-  var vat = Math.round(sup*0.1);
-  if(vatEl) vatEl.value = vat ? hdFmt(vat) : '';
-  var tot = sup + vat;
-  if(totEl) totEl.value = tot ? '₩'+hdFmt(tot) : '';
-  // 실지급액 = 합계 − 비용
-  var exp = hdNum((document.getElementById('hd-expense')||{}).value || '0');
-  var netEl = document.getElementById('hd-netpay');
-  if(netEl) netEl.value = (tot||exp) ? '₩'+hdFmt(Math.max(0, tot - exp)) : '';
+  if(vatEl) vatEl.value = '0';   // 하도정산은 부가세 없음
+  if(totEl) totEl.value = sup ? '₩'+hdFmt(sup) : '';
 }
 function hdFillPaidFull(){
   var sup = hdNum(document.getElementById('hd-amount').value);
   var vat = hdNum(document.getElementById('hd-vat').value);
-  if(!vat) vat = Math.round(sup*0.1);
+  vat = 0; // 하도정산 부가세 없음
   var paidEl = document.getElementById('hd-paid');
   if(paidEl) paidEl.value = hdFmt(sup+vat);
 }
@@ -16787,7 +16781,7 @@ function hdAdd(){
   var site = (document.getElementById('hd-site').value||'').trim();
   if(sup<=0 && !client && !site){ alert('공급가액과 회사명/현장명을 입력하세요.'); return; }
   var vat = hdNum(document.getElementById('hd-vat').value);
-  if(!vat) vat = Math.round(sup*0.1);
+  vat = 0; // 하도정산 부가세 없음
   var paid = hdNum(document.getElementById('hd-paid').value);
   var list = hdGet();
   if(window._hdEditId){
@@ -17042,8 +17036,8 @@ function hdRender(){
       +   '<div style="flex:0 0 auto;">'+badge+'</div>'
       + '</div>'
       + '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;color:#6b7280;border-top:1px dashed #eee;padding-top:6px;">'
-      +   '<span style="min-width:0;word-break:break-word;">공급가 ₩'+hdFmt(sup)+' · VAT ₩'+hdFmt(vat)+'</span>'
-      +   '<span style="flex:0 0 auto;font-weight:800;color:#0d1b2a;font-size:13px;">₩'+hdFmt(tot)+'</span>'
+      +   '<span style="min-width:0;word-break:break-word;">정산 금액</span>'
+      +   '<span style="flex:0 0 auto;font-weight:800;color:#0d1b2a;font-size:13px;">₩'+hdFmt(sup)+'</span>'
       + '</div>'
       + (hdNum(h.expense)>0 ? '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;margin-top:4px;"><span style="color:#b45309;">💸 비용 차감</span><span style="color:#b45309;font-weight:700;">− ₩'+hdFmt(hdNum(h.expense))+'</span></div><div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;margin-top:2px;"><span style="color:#059669;font-weight:700;">실지급액</span><span style="color:#059669;font-weight:800;">₩'+hdFmt(Math.max(0,tot-hdNum(h.expense)))+'</span></div>' : '')
       + paidLine
