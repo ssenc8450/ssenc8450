@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DB · 계약서 인쇄수정 + 견적서 첨부</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DC · 계약조항 한장 자동맞춤</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2542,6 +2542,27 @@ function lsInvalidate(key){ if(key) delete window.__lsCache[key]; else window.__
   } catch(e){}
 })();
 
+// 지정한 페이지(sel) 안의 .pgin 내용을 "한 장" 세로 높이에 맞게 축소(확대 안 함).
+// 조항이 많아 한 페이지를 넘칠 때만 살짝 줄여서 한 장에 담기게 함.
+window.__ssFitDown = function(pdoc, sel, land){
+  try {
+    if(!pdoc || !pdoc.body) return;
+    // A4 세로 - 페이지 상하 패딩(25mm*2) - 안전여백 6mm
+    var availH = (land ? 210 : 297) - 50 - 6;   // mm
+    var pxH = availH / 25.4 * 96;
+    var pages = pdoc.body.querySelectorAll(sel);
+    for(var i=0; i<pages.length; i++){
+      var t = pages[i], inner = t.querySelector('.pgin') || t;
+      inner.style.transformOrigin = 'top left';
+      inner.style.transform = 'none';
+      var ch = inner.scrollHeight; if(!ch) continue;
+      var s = (ch > pxH) ? (pxH / ch) : 1;   // 넘칠 때만 축소
+      if(s < 0.5) s = 0.5;                    // 과도 축소 방지
+      inner.style.transform = (s < 0.999) ? ('scale(' + s + ')') : 'none';
+    }
+  } catch(e){}
+};
+
 window.printDocHtml = function(doc, opts){
   opts = opts || {};
   try {
@@ -2581,6 +2602,7 @@ window.printDocHtml = function(doc, opts){
 
     // 미리보기 1장 맞춤(onePage/fillPages) — 프레임 로드 후 적용
     function fitPreview(){
+      try { if(opts.fitDownSel) window.__ssFitDown(frame.contentWindow.document, opts.fitDownSel, !!opts.landscape); } catch(e){}
       if(!(opts.onePage || opts.fillPages)) return;
       try {
         var land = !!opts.landscape;
@@ -2605,7 +2627,13 @@ window.printDocHtml = function(doc, opts){
         }
       } catch(e){}
     }
-    frame.addEventListener('load', function(){ setTimeout(fitPreview, 300); });
+    frame.addEventListener('load', function(){
+      setTimeout(fitPreview, 300);
+      try {
+        var fd = frame.contentWindow.document;
+        if(fd.fonts && fd.fonts.ready) fd.fonts.ready.then(function(){ setTimeout(fitPreview, 60); }).catch(function(){});
+      } catch(e){}
+    });
 
     cbtn.onclick = function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
     // 실제 인쇄는 화면 밖 전용 iframe 에서 실행 → 빈 페이지 인쇄 버그 방지
@@ -2637,6 +2665,7 @@ window.__ssPrintDoc = function(safeDoc, opts){
     var printed = false;
 
     function doFit(pdoc){
+      try { if(opts.fitDownSel) window.__ssFitDown(pdoc, opts.fitDownSel, land); } catch(e){}
       if(!(opts.onePage || opts.fillPages)) return;
       try {
         var availW=(land?297:210)-12, availH=(land?210:297)-12;
@@ -8792,12 +8821,15 @@ html,body{font-family:'Noto Sans KR',sans-serif;background:#e0e0e0;color:#111827
 .cover-bottom{width:100%;text-align:center;border-top:2px solid #0d1b2a;padding-top:28px;margin-top:auto;}
 .cover-company{font-size:28px;font-weight:900;color:#0d1b2a;letter-spacing:2px;}
 .cover-company-en{font-size:11px;color:#6b7280;letter-spacing:5px;margin-top:8px;font-weight:600;}
-h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-align:center;color:#0d1b2a;margin-bottom:42px;text-indent:36px;font-weight:900;}
-.intro{font-size:15px;text-align:justify;margin-bottom:24px;line-height:2.2;text-indent:22px;}
+h1{font-family:'Noto Serif KR',serif;font-size:32px;letter-spacing:24px;text-align:center;color:#0d1b2a;margin-bottom:22px;text-indent:24px;font-weight:900;}
+.intro{font-size:14.5px;text-align:justify;margin-bottom:13px;line-height:1.85;text-indent:22px;}
 .intro b{font-weight:800;color:#0d1b2a;}
-.divider{text-align:center;font-size:16px;font-weight:800;letter-spacing:18px;margin:14px 0 14px;text-indent:18px;color:#0d1b2a;}
-.clauses{font-size:14.5px;line-height:2.2;}
-.clauses .clause{margin-bottom:16px;display:flex;gap:6px;}
+.divider{text-align:center;font-size:16px;font-weight:800;letter-spacing:18px;margin:9px 0 9px;text-indent:18px;color:#0d1b2a;}
+.clauses{font-size:14px;line-height:1.7;}
+.clauses .clause{margin-bottom:8px;display:flex;gap:6px;}
+/* 조항이 많아도 한 장에 자동으로 맞춤 (한 장 높이 고정 + 내용 축소) */
+.page-clauses{height:297mm;min-height:297mm;overflow:hidden;}
+.page-clauses .pgin{transform-origin:top left;}
 .clauses .clause .num{flex-shrink:0;font-weight:800;color:#0d1b2a;}
 .clauses .clause .txt{flex:1;text-align:justify;}
 .contract-tbl{width:100%;border-collapse:collapse;border:2.5px solid #0d1b2a;margin:14px 0;font-size:13px;table-layout:fixed;}
@@ -8871,8 +8903,9 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
   </div>
 </div>
 
-<!-- ─────────── 1페이지: 표제 + 도입부 + 6개 조항 ─────────── -->
-<div class="page">
+<!-- ─────────── 1페이지: 표제 + 도입부 + 조항 (조항 많아도 한 장 자동맞춤) ─────────── -->
+<div class="page page-clauses">
+  <div class="pgin">
   <h1>계 약 서</h1>
 
   <div class="intro">
@@ -8885,6 +8918,7 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
 
   <div class="clauses">
     ${clausesHtml}
+  </div>
   </div>
 </div>
 
@@ -8984,7 +9018,7 @@ ${quotePage2 ? `<div class="page page-quote">${quotePage2}</div>` : ''}
     }
     document.getElementById('contractModal').style.display = 'none';
     setTimeout(function(){
-      try { window.printDocHtml(doc, { title: (ctType||'계약서') + ' 계약서 - ' + (projectTitle||'') }); }
+      try { window.printDocHtml(doc, { title: (ctType||'계약서') + ' 계약서 - ' + (projectTitle||''), fitDownSel: '.page-clauses' }); }
       catch(e2){ alert('계약서 출력 오류: ' + (e2.message||e2)); }
     }, 100);
     if(typeof logAction === 'function') logAction('출력', '계약서', `${cliName||'-'} · ${q.projectName||'-'}`);
