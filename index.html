@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DC · 계약조항 한장 자동맞춤</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DD · 계약조항 간격 자동분배</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2542,22 +2542,21 @@ function lsInvalidate(key){ if(key) delete window.__lsCache[key]; else window.__
   } catch(e){}
 })();
 
-// 지정한 페이지(sel) 안의 .pgin 내용을 "한 장" 세로 높이에 맞게 축소(확대 안 함).
-// 조항이 많아 한 페이지를 넘칠 때만 살짝 줄여서 한 장에 담기게 함.
+// 지정한 페이지(sel) 안의 .pgin 내용이 한 장 높이를 넘칠 때만 축소(확대 안 함).
+// 넘치지 않으면 건드리지 않음 → flex 분배로 아래 여백까지 자동으로 채워짐.
 window.__ssFitDown = function(pdoc, sel, land){
   try {
     if(!pdoc || !pdoc.body) return;
-    // A4 세로 - 페이지 상하 패딩(25mm*2) - 안전여백 6mm
-    var availH = (land ? 210 : 297) - 50 - 6;   // mm
-    var pxH = availH / 25.4 * 96;
     var pages = pdoc.body.querySelectorAll(sel);
     for(var i=0; i<pages.length; i++){
       var t = pages[i], inner = t.querySelector('.pgin') || t;
       inner.style.transformOrigin = 'top left';
       inner.style.transform = 'none';
-      var ch = inner.scrollHeight; if(!ch) continue;
-      var s = (ch > pxH) ? (pxH / ch) : 1;   // 넘칠 때만 축소
-      if(s < 0.5) s = 0.5;                    // 과도 축소 방지
+      var avail = inner.clientHeight;   // 고정된 한 장 내용영역 높이
+      var need  = inner.scrollHeight;   // 실제 필요한 높이
+      if(!avail || !need) continue;
+      var s = (need > avail + 1) ? (avail / need) : 1;  // 넘칠 때만 축소
+      if(s < 0.5) s = 0.5;                                // 과도 축소 방지
       inner.style.transform = (s < 0.999) ? ('scale(' + s + ')') : 'none';
     }
   } catch(e){}
@@ -8827,9 +8826,14 @@ h1{font-family:'Noto Serif KR',serif;font-size:32px;letter-spacing:24px;text-ali
 .divider{text-align:center;font-size:16px;font-weight:800;letter-spacing:18px;margin:9px 0 9px;text-indent:18px;color:#0d1b2a;}
 .clauses{font-size:14px;line-height:1.7;}
 .clauses .clause{margin-bottom:8px;display:flex;gap:6px;}
-/* 조항이 많아도 한 장에 자동으로 맞춤 (한 장 높이 고정 + 내용 축소) */
+/* 조항 페이지: 한 장 높이 고정 + 조항을 세로로 자동 분배(적으면 간격 넓게, 많으면 좁게) */
 .page-clauses{height:297mm;min-height:297mm;overflow:hidden;}
-.page-clauses .pgin{transform-origin:top left;}
+.page-clauses .pgin{height:100%;display:flex;flex-direction:column;transform-origin:top left;}
+.page-clauses .pgin > h1,
+.page-clauses .pgin > .intro,
+.page-clauses .pgin > .divider{flex:0 0 auto;}
+.page-clauses .pgin > .clauses{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-between;}
+.page-clauses .pgin > .clauses .clause{margin-bottom:2px;}
 .clauses .clause .num{flex-shrink:0;font-weight:800;color:#0d1b2a;}
 .clauses .clause .txt{flex:1;text-align:justify;}
 .contract-tbl{width:100%;border-collapse:collapse;border:2.5px solid #0d1b2a;margin:14px 0;font-size:13px;table-layout:fixed;}
