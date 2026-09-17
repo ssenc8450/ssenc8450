@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CZ · 계약서출력수정</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DA · 계약서 인쇄 빈페이지 수정</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -2545,11 +2545,14 @@ function lsInvalidate(key){ if(key) delete window.__lsCache[key]; else window.__
 window.printDocHtml = function(doc, opts){
   opts = opts || {};
   try {
+    // 인쇄용 문서에서 스크립트 제거 (자동 인쇄 방지 · 안정)
+    var safeDoc = String(doc).replace(/<script[\s\S]*?<\/script>/gi, '');
+
     // 기존 오버레이 제거
     var oldOv = document.getElementById('__printOverlay');
     if(oldOv && oldOv.parentNode) oldOv.parentNode.removeChild(oldOv);
 
-    // 앱 내부 전체화면 팝업(오버레이) — 새 창/네비게이션 없음(설치형 앱 안전)
+    // 앱 내부 전체화면 미리보기(오버레이) — 새 창/네비게이션 없음(설치형 앱 안전)
     var ov = document.createElement('div');
     ov.id = '__printOverlay';
     ov.style.cssText = 'position:fixed;inset:0;z-index:100000000;background:#525659;display:flex;flex-direction:column;';
@@ -2569,74 +2572,131 @@ window.printDocHtml = function(doc, opts){
 
     var frame = document.createElement('iframe');
     frame.id = '__printFrame';
-    frame.style.cssText = 'flex:1;width:100%;border:0;background:#525659;';
+    frame.style.cssText = 'flex:1;width:100%;border:0;background:#fff;';
+    // srcdoc 로 로드 (document.write 보다 onload 보장 · 빈 화면 방지)
+    frame.setAttribute('srcdoc', safeDoc);
 
     ov.appendChild(bar); ov.appendChild(frame);
     document.body.appendChild(ov);
 
-    // 문서 로드 (자동 인쇄 스크립트는 제거 — 인쇄는 버튼으로만)
-    var safeDoc = doc.replace(/<script[\s\S]*?<\/script>/gi, '');
-    var fdoc = frame.contentWindow.document;
-    fdoc.open(); fdoc.write(safeDoc); fdoc.close();
-
-    // 1장 맞춤: 내용을 A4 한 장에 꽉 차게 (opts.onePage). 가로/세로 자동.
-    if(opts.onePage || opts.fillPages){
-      var land = !!opts.landscape;
-      var availW = (land ? 297 : 210) - 12;  // mm (여백 6mm*2)
-      var availH = (land ? 210 : 297) - 12;
-      var pxW = availW / 25.4 * 96;
-      var pxH = availH / 25.4 * 96;
-      var fitAll = function(){
-        try {
-          var d2 = frame.contentWindow.document;
-          var body = d2.body; if(!body) return;
-          var targets;
-          if(opts.fillPages){
-            targets = body.querySelectorAll('.page');
-            if(!targets.length) targets = [ body.querySelector('.__wrap') || body ];
-          } else {
-            targets = [ body.querySelector('.__wrap') || body.querySelector('.gpc') || body ];
-          }
-          for(var k=0; k<targets.length; k++){
-            var t = targets[k];
-            var inner = t.querySelector('.pgin') || t;
-            inner.style.transformOrigin = 'top left';
-            inner.style.transform = 'none';
-            var cw = inner.scrollWidth, ch = inner.scrollHeight;
-            if(!cw || !ch) continue;
-            var scale = Math.min(pxW / cw, pxH / ch);
-            if(scale > 3) scale = 3;
-            if(scale < 0.3) scale = 0.3;
-            inner.style.transform = 'scale(' + scale + ')';
-          }
-        } catch(e){}
-      };
-      try { frame.contentWindow.addEventListener('beforeprint', fitAll); } catch(e){}
-      setTimeout(fitAll, 600);
+    // 미리보기 1장 맞춤(onePage/fillPages) — 프레임 로드 후 적용
+    function fitPreview(){
+      if(!(opts.onePage || opts.fillPages)) return;
+      try {
+        var land = !!opts.landscape;
+        var availW = (land ? 297 : 210) - 12;  // mm (여백 6mm*2)
+        var availH = (land ? 210 : 297) - 12;
+        var pxW = availW / 25.4 * 96, pxH = availH / 25.4 * 96;
+        var d2 = frame.contentWindow.document, body = d2.body; if(!body) return;
+        var targets;
+        if(opts.fillPages){
+          targets = body.querySelectorAll('.page');
+          if(!targets.length) targets = [ body.querySelector('.__wrap') || body ];
+        } else {
+          targets = [ body.querySelector('.__wrap') || body.querySelector('.gpc') || body ];
+        }
+        for(var k=0; k<targets.length; k++){
+          var t = targets[k], inner = t.querySelector('.pgin') || t;
+          inner.style.transformOrigin = 'top left'; inner.style.transform = 'none';
+          var cw = inner.scrollWidth, ch = inner.scrollHeight; if(!cw || !ch) continue;
+          var scale = Math.min(pxW / cw, pxH / ch);
+          if(scale > 3) scale = 3; if(scale < 0.3) scale = 0.3;
+          inner.style.transform = 'scale(' + scale + ')';
+        }
+      } catch(e){}
     }
+    frame.addEventListener('load', function(){ setTimeout(fitPreview, 300); });
 
     cbtn.onclick = function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); };
-    pbtn.onclick = function(){
-      var _origTitle = document.title;
-      try {
-        // 저장 파일명 = 부모 페이지 title (시스템 인쇄가 이걸 파일명으로 사용)
-        if(opts.title){ document.title = opts.title; }
-        try { frame.contentWindow.document.title = opts.title || document.title; } catch(e){}
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-        // 인쇄 대화상자 닫힌 뒤 원래 제목 복구
-        setTimeout(function(){ document.title = _origTitle; }, 3000);
-        try {
-          frame.contentWindow.addEventListener('afterprint', function(){ document.title = _origTitle; });
-        } catch(e){}
-      } catch(e){
-        document.title = _origTitle;
-        alert('인쇄를 시작할 수 없어요: ' + (e.message || e));
-      }
-    };
+    // 실제 인쇄는 화면 밖 전용 iframe 에서 실행 → 빈 페이지 인쇄 버그 방지
+    pbtn.onclick = function(){ window.__ssPrintDoc(safeDoc, opts); };
     return true;
   } catch(e){
     alert('미리보기 표시 실패: ' + (e.message || e));
+    return false;
+  }
+};
+
+// 화면 밖 전용 iframe 으로 실제 인쇄 (폰트/레이아웃 준비 후 출력 → 빈 페이지 방지)
+window.__ssPrintDoc = function(safeDoc, opts){
+  opts = opts || {};
+  try {
+    var land = !!opts.landscape;
+    var old = document.getElementById('__printSandbox');
+    if(old && old.parentNode) old.parentNode.removeChild(old);
+
+    var pf = document.createElement('iframe');
+    pf.id = '__printSandbox';
+    pf.setAttribute('aria-hidden','true');
+    // display:none 이면 인쇄가 비므로, 화면 밖에 A4 실제 크기로 렌더
+    pf.style.cssText = 'position:fixed;left:-10000px;top:0;width:'+(land?'297mm':'210mm')+';height:'+(land?'210mm':'297mm')+';border:0;background:#fff;';
+    pf.setAttribute('srcdoc', safeDoc);
+    document.body.appendChild(pf);
+
+    var _origTitle = document.title;
+    var printed = false;
+
+    function doFit(pdoc){
+      if(!(opts.onePage || opts.fillPages)) return;
+      try {
+        var availW=(land?297:210)-12, availH=(land?210:297)-12;
+        var pxW=availW/25.4*96, pxH=availH/25.4*96;
+        var body=pdoc.body; if(!body) return;
+        var targets;
+        if(opts.fillPages){
+          targets=body.querySelectorAll('.page');
+          if(!targets.length) targets=[ body.querySelector('.__wrap')||body ];
+        } else {
+          targets=[ body.querySelector('.__wrap')||body.querySelector('.gpc')||body ];
+        }
+        for(var k=0;k<targets.length;k++){
+          var t=targets[k], inner=t.querySelector('.pgin')||t;
+          inner.style.transformOrigin='top left'; inner.style.transform='none';
+          var cw=inner.scrollWidth, ch=inner.scrollHeight; if(!cw||!ch) continue;
+          var s=Math.min(pxW/cw,pxH/ch); if(s>3)s=3; if(s<0.3)s=0.3;
+          inner.style.transform='scale('+s+')';
+        }
+      } catch(e){}
+    }
+
+    function cleanup(){
+      setTimeout(function(){ document.title=_origTitle; }, 2500);
+      setTimeout(function(){ if(pf.parentNode) pf.parentNode.removeChild(pf); }, 1500);
+    }
+
+    function go(){
+      if(printed) return; printed=true;
+      try {
+        var pdoc = pf.contentWindow.document;
+        if(opts.title){ document.title=opts.title; try{ pdoc.title=opts.title; }catch(e){} }
+        doFit(pdoc);
+        pf.contentWindow.focus();
+        pf.contentWindow.print();
+      } catch(e){ alert('인쇄를 시작할 수 없어요: '+(e.message||e)); }
+      cleanup();
+    }
+
+    function whenReady(){
+      if(printed) return;
+      try {
+        var pdoc = pf.contentWindow.document;
+        if(pdoc && pdoc.fonts && pdoc.fonts.ready){
+          var done=false;
+          pdoc.fonts.ready.then(function(){ if(!done){done=true; setTimeout(go,120);} })
+                          .catch(function(){ if(!done){done=true; setTimeout(go,120);} });
+          setTimeout(function(){ if(!done){done=true; setTimeout(go,120);} }, 1500); // 폰트 대기 최대 1.5s
+        } else {
+          setTimeout(go, 300);
+        }
+      } catch(e){ setTimeout(go, 300); }
+    }
+
+    pf.addEventListener('load', whenReady);
+    // 안전장치: load 이벤트가 안 와도 인쇄 실행
+    setTimeout(function(){ whenReady(); }, 1200);
+    return true;
+  } catch(e){
+    alert('인쇄 준비 실패: '+(e.message||e));
     return false;
   }
 };
