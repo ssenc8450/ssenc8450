@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CX · 하도홈부가세제외</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CY · 계약서보완</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -8381,6 +8381,12 @@ function renderQuoteList() {
 /* ═══════════════════════════════════════════════════════════
    📜 계약서 자동 생성 (견적 → 계약서)
    ═══════════════════════════════════════════════════════════ */
+function ctTogglePeriod(){
+  var on = document.getElementById('ct-use-period')?.checked;
+  var box = document.getElementById('ct-period-box');
+  if(box) box.style.display = on ? 'grid' : 'none';
+}
+
 function openContractFromQuote(editId){
   const q = getQuoteList().find(x => x._editId === editId);
   if(!q){ alert('견적서를 찾을 수 없습니다.'); return; }
@@ -8430,7 +8436,19 @@ function openContractFromQuote(editId){
             <option value="공사 도급">공사 도급</option>
           </select>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#fafbfc;">
+          <div style="font-size:11px;font-weight:800;color:#1e40af;margin-bottom:6px;">📋 발주자(상대방) 정보</div>
+          <input id="ct-cli-name" placeholder="회사명" style="width:100%;box-sizing:border-box;margin-bottom:5px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;outline:none;font-family:'Noto Sans KR',sans-serif;"/>
+          <input id="ct-cli-owner" placeholder="대표자명" style="width:100%;box-sizing:border-box;margin-bottom:5px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;outline:none;font-family:'Noto Sans KR',sans-serif;"/>
+          <input id="ct-cli-bizno" placeholder="사업자등록번호" style="width:100%;box-sizing:border-box;margin-bottom:5px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;outline:none;font-family:'Noto Sans KR',sans-serif;"/>
+          <input id="ct-cli-addr" placeholder="주소" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;outline:none;font-family:'Noto Sans KR',sans-serif;"/>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 2px;">
+          <input type="checkbox" id="ct-use-period" checked onchange="ctTogglePeriod()" style="width:18px;height:18px;cursor:pointer;"/>
+          <label for="ct-use-period" style="font-size:12px;font-weight:700;color:#374151;cursor:pointer;">계약기간 표시 (체크 해제 시 계약서에서 뺌)</label>
+        </div>
+        <div id="ct-period-box" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div>
             <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">공사 시작일</label>
             <input id="ct-start" type="date" value="${today}" style="width:100%;padding:9px 7px;border:1px solid #e5e7eb;border-radius:7px;font-size:12px;outline:none;"/>
@@ -8469,6 +8487,12 @@ function openContractFromQuote(editId){
   `;
   modal.style.display = 'flex';
 
+  // 발주자 정보: 견적서의 거래처명 자동 채움
+  try {
+    var _cn = document.getElementById('ct-cli-name');
+    if(_cn && q && q.clientName) _cn.value = q.clientName;
+  } catch(e){}
+
   // 표준 계약 조건 목록 (체크박스로 선택). ${ctType}는 출력 시 실제 용역종류로 치환
   const stdClauses = [
     '"을"은 상기 공사 현장에 대한 『[TYPE]』에 관한 "갑"과의 약정을 계약에 따른 시방서와 관리자의 지시에 따라 성실히 이행하도록 한다.',
@@ -8495,9 +8519,15 @@ function generateContract(editId){
 
   const co = getCurrentCompany();
   const ctType = document.getElementById('ct-type')?.value || '계측용역';
-  const startDate = document.getElementById('ct-start')?.value || '';
-  const endDate = document.getElementById('ct-end')?.value || '';
+  const usePeriod = document.getElementById('ct-use-period') ? document.getElementById('ct-use-period').checked : true;
+  const startDate = usePeriod ? (document.getElementById('ct-start')?.value || '') : '';
+  const endDate = usePeriod ? (document.getElementById('ct-end')?.value || '') : '';
   const paymentType = document.getElementById('ct-payment')?.value || '기성';
+  // 발주자(상대방) 정보
+  const cliName = (document.getElementById('ct-cli-name')?.value || q.clientName || '').trim();
+  const cliOwner = (document.getElementById('ct-cli-owner')?.value || '').trim();
+  const cliBizno = (document.getElementById('ct-cli-bizno')?.value || '').trim();
+  const cliAddr = (document.getElementById('ct-cli-addr')?.value || '').trim();
 
   // 결제 조건 문구
   const paymentClause = {
@@ -8855,10 +8885,10 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
       <td class="lbl">대금의지급</td>
       <td>${paymentShort}</td>
     </tr>
-    <tr>
+    ${usePeriod ? `<tr>
       <td class="lbl">계약 기간</td>
       <td>${startDate ? fmtDate(startDate) : '-'} ~ ${endDate ? fmtDate(endDate) : '-'}</td>
-    </tr>
+    </tr>` : ''}
     <tr>
       <td class="lbl">용 역 내 역</td>
       <td class="service-list">${serviceListHTML || '(견적서 참조)'}</td>
@@ -8892,28 +8922,28 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
     </tr>
     <tr>
       <td class="lbl">사업자번호</td>
-      <td class="val">${q.clientBizNo||''}</td>
+      <td class="val">${cliBizno||''}</td>
       <td class="divider-col"></td>
       <td class="lbl">사업자번호</td>
       <td class="val">${co.bizNo||''}</td>
     </tr>
     <tr>
       <td class="lbl">상   호</td>
-      <td class="val">${q.clientName||''}</td>
+      <td class="val">${cliName||''}</td>
       <td class="divider-col"></td>
       <td class="lbl">상   호</td>
       <td class="val">${co.name||''}</td>
     </tr>
     <tr>
       <td class="lbl">주   소</td>
-      <td class="val">${q.clientAddress||''}</td>
+      <td class="val">${cliAddr||''}</td>
       <td class="divider-col"></td>
       <td class="lbl">주   소</td>
       <td class="val">${co.address||''}</td>
     </tr>
     <tr>
       <td class="lbl">대   표</td>
-      <td class="val-sign"><div class="row"><span>　</span><span>(인)</span></div></td>
+      <td class="val-sign"><div class="row"><span>${cliOwner||'　'}</span><span>(인)</span></div></td>
       <td class="divider-col"></td>
       <td class="lbl">대   표</td>
       <td class="val-sign"><div class="row"><span>${co.owner||''}</span><span>(인)</span></div></td>
@@ -8932,9 +8962,16 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
 </html>`;
 
   try {
-    window.printDocHtml(doc, { features: 'width=900,height=900' });
+    if(typeof window.printDocHtml !== 'function'){
+      alert('인쇄 기능을 불러오지 못했어요. 새로고침 후 다시 시도해주세요.');
+      return;
+    }
     document.getElementById('contractModal').style.display = 'none';
-    if(typeof logAction === 'function') logAction('출력', '계약서', `${q.clientName||'-'} · ${q.projectName||'-'}`);
+    setTimeout(function(){
+      try { window.printDocHtml(doc, { title: (ctType||'계약서') + ' 계약서 - ' + (projectTitle||'') }); }
+      catch(e2){ alert('계약서 출력 오류: ' + (e2.message||e2)); }
+    }, 100);
+    if(typeof logAction === 'function') logAction('출력', '계약서', `${cliName||'-'} · ${q.projectName||'-'}`);
   } catch(err){
     console.error('계약서 생성 오류:', err);
     alert('계약서 생성 오류: ' + (err.message||''));
