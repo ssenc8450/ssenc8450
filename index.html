@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DA · 계약서 인쇄 빈페이지 수정</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DB · 계약서 인쇄수정 + 견적서 첨부</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -8727,79 +8727,37 @@ function generateContract(editId){
   });
 
   // ─────────── 견적서 첨부 (원본 2페이지 양식 그대로) ───────────
-  // q 데이터를 form에 임시 적용 → printDoc 페이지 캡처 → 백업 복원
+  // 이 견적서(q) 데이터를 폼/전역에 잠깐 적용 → buildQuoteHTML 로 2페이지 생성 → 무조건 원상복구
   let quotePage1 = '';
   let quotePage2 = '';
-  // 견적서 첨부는 견적 편집화면에서만 가능하므로 계약서만 단독 출력 (안정성 우선)
-  const _ATTACH_QUOTE = false;
-  try {
-    if(_ATTACH_QUOTE && typeof printDoc === 'function' && typeof collectFormData === 'function'){
-      // 1) 현재 form 백업
-      const backupForm = collectFormData();
-      const prevItems = JSON.parse(JSON.stringify(partItems));
-
-      // 2) q 데이터를 form에 임시 적용
-      const _set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val||''; };
-      _set('clientName', q.clientName); _set('projectName', q.projectName);
-      _set('quoteDate', q.quoteDate); _set('quoteNo', q.quoteNo);
-      _set('siteLocation', q.siteLocation); _set('clientManager', q.clientManager);
-      _set('clientTel', q.clientTel); _set('companyName', q.companyName);
-      _set('companyOwner', q.companyOwner || (typeof getCurrentCompany==='function'?getCurrentCompany().owner:'') || ''); _set('companyAddr', q.companyAddr);
-      _set('companyBizType', q.companyBizType); _set('companyBizItem', q.companyBizItem);
-      _set('companyTel', q.companyTel); _set('companyManager', q.companyManager);
-      _set('remarksExtra', q.remarksExtra);
-      const vc = document.getElementById('vatCheck');
-      if(vc) vc.checked = q.vatCheck || false;
-      if(q.partItems){
-        partItems = {
-          material: q.partItems.material||[],
-          labor: q.partItems.labor||[],
-          service: q.partItems.service||[],
-          drilling: q.partItems.drilling||[],
-          etc: q.partItems.etc||[],
-          etc2: q.partItems.etc2||[]
-        };
-      }
-      if(q.condChecked){
-        q.condChecked.forEach((checked,i)=>{
-          const cb = document.getElementById('cond'+i);
-          if(cb) cb.checked = checked;
-        });
-      }
-
-      // 3) printDoc으로 견적서 2페이지 HTML 캡처
-      const result = printDoc({returnPages: true});
-      if(result){
-        quotePage1 = result.page1 || '';
-        quotePage2 = result.page2 || '';
+  const _ATTACH_QUOTE = true;   // 계약서 뒤에 견적서 첨부 (끄려면 false)
+  if(_ATTACH_QUOTE
+     && typeof buildQuoteHTML === 'function'
+     && typeof collectFormData === 'function'
+     && typeof loadFormData === 'function'){
+    let _backup = null;
+    try {
+      // 1) 현재 편집중인 폼/전역 상태 백업
+      _backup = collectFormData();
+      // 2) 이 견적서 데이터를 폼/전역에 임시 적용 (loadFormData 가 partItems·조건 등 전부 세팅)
+      loadFormData(q);
+      // 3) 견적서 원본 2페이지 HTML 생성
+      const _pg = buildQuoteHTML({ returnPages: true });
+      if(_pg){
+        quotePage1 = _pg.page1 || '';
+        quotePage2 = _pg.page2 || '';
         // 도장 이미지 제거 (계약서 첨부용 - 도장 없이)
         const stampPattern = /<img[^>]*position:absolute;top:-38px[^>]*>/g;
         quotePage1 = quotePage1.replace(stampPattern, '');
         quotePage2 = quotePage2.replace(stampPattern, '');
       }
-
-      // 4) 백업 복원
-      partItems = prevItems;
-      _set('clientName', backupForm.clientName); _set('projectName', backupForm.projectName);
-      _set('quoteDate', backupForm.quoteDate); _set('quoteNo', backupForm.quoteNo);
-      _set('siteLocation', backupForm.siteLocation); _set('clientManager', backupForm.clientManager);
-      _set('clientTel', backupForm.clientTel); _set('companyName', backupForm.companyName);
-      _set('companyOwner', backupForm.companyOwner); _set('companyAddr', backupForm.companyAddr);
-      _set('companyBizType', backupForm.companyBizType); _set('companyBizItem', backupForm.companyBizItem);
-      _set('companyTel', backupForm.companyTel); _set('companyManager', backupForm.companyManager);
-      _set('remarksExtra', backupForm.remarksExtra);
-      if(vc) vc.checked = backupForm.vatCheck || false;
-      if(backupForm.condChecked){
-        backupForm.condChecked.forEach((checked,i)=>{
-          const cb = document.getElementById('cond'+i);
-          if(cb) cb.checked = checked;
-        });
-      }
-      if(typeof renderItems === 'function') renderItems();
+    } catch(err){
+      console.error('견적서 첨부 생성 실패:', err);
+      quotePage1 = ''; quotePage2 = '';
+    } finally {
+      // 4) 무슨 일이 있어도 원래 편집중이던 상태로 복구
+      try { if(_backup) loadFormData(_backup); } catch(e){ console.error('폼 복구 실패:', e); }
     }
-  } catch(err){
-    console.error('견적서 첨부 캡처 실패:', err);
-    quotePage1 = '<div style="text-align:center;padding:40px;color:#9ca3af;">견적서를 첨부할 수 없습니다.</div>';
   }
 
   const doc = `<!DOCTYPE html>
