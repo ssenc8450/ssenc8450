@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CY · 계약서보완</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.07.16-CZ · 계약서출력수정</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -8670,8 +8670,10 @@ function generateContract(editId){
   // q 데이터를 form에 임시 적용 → printDoc 페이지 캡처 → 백업 복원
   let quotePage1 = '';
   let quotePage2 = '';
+  // 견적서 첨부는 견적 편집화면에서만 가능하므로 계약서만 단독 출력 (안정성 우선)
+  const _ATTACH_QUOTE = false;
   try {
-    if(typeof printDoc === 'function' && typeof collectFormData === 'function'){
+    if(_ATTACH_QUOTE && typeof printDoc === 'function' && typeof collectFormData === 'function'){
       // 1) 현재 form 백업
       const backupForm = collectFormData();
       const prevItems = JSON.parse(JSON.stringify(partItems));
@@ -8951,13 +8953,9 @@ h1{font-family:'Noto Serif KR',serif;font-size:38px;letter-spacing:36px;text-ali
   </table>
 </div>
 
-<!-- ─────────── 3,4페이지: 견적서 첨부 (원본 양식 그대로 2장) ─────────── -->
-<div class="page page-quote">
-  ${quotePage1}
-</div>
-<div class="page page-quote">
-  ${quotePage2}
-</div>
+<!-- ─────────── 견적서 첨부 (있을 때만) ─────────── -->
+${quotePage1 ? `<div class="page page-quote">${quotePage1}</div>` : ''}
+${quotePage2 ? `<div class="page page-quote">${quotePage2}</div>` : ''}
 </body>
 </html>`;
 
