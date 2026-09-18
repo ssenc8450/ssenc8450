@@ -772,7 +772,7 @@ th{white-space:nowrap;}
     <div style="min-width:0;flex:1;">
       <div class="co" id="menuCompanyName" style="font-size:17px;line-height:1.2;text-align:left;color:#0d1b2a;font-weight:900;">(주)<span>신성이앤씨</span></div>
       <div class="sub" id="menuCompanySub" style="font-size:9px;text-align:left;color:#94a3b8;">SSENC MANAGEMENT SYSTEM</div>
-      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DD · 계약조항 간격 자동분배</div>
+      <div id="appVersionTag" style="font-size:9px;text-align:left;margin-top:2px;color:#2563eb;font-weight:700;">v2026.09.17-DE · 거래처명 (주)·주식회사 통합</div>
     </div>
     <div id="companyBadgeBox" style="flex:0 0 auto;display:flex;gap:5px;">
       <button onclick="switchCompany('ssenc')" id="coTabSsenc" style="padding:6px 12px;background:#0d1b2a;color:#fff;border:1.5px solid #0d1b2a;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;">신성</button>
@@ -14114,15 +14114,19 @@ function caCompute(){
   const byClient = {};
   rows.forEach(r => {
     const name = (r.client||'').trim() || '(미지정)';
-    if(!byClient[name]) byClient[name] = { name, rows:[], sites:new Set() };
-    byClient[name].rows.push(r);
-    if(r.site) byClient[name].sites.add(r.site);
+    const key = (typeof window.companyKey === 'function') ? window.companyKey(name) : name;
+    if(!byClient[key]) byClient[key] = { name, rows:[], sites:new Set() };
+    else if(name.length > byClient[key].name.length) byClient[key].name = name;
+    byClient[key].rows.push(r);
+    if(r.site) byClient[key].sites.add(r.site);
   });
 
   // 거래처 목록에 있는데 매출 없는 곳도 추가
   clientBook.forEach(cb => {
     const name = (cb.name||'').trim();
-    if(name && !byClient[name]) byClient[name] = { name, rows:[], sites:new Set() };
+    if(!name) return;
+    const key = (typeof window.companyKey === 'function') ? window.companyKey(name) : name;
+    if(!byClient[key]) byClient[key] = { name, rows:[], sites:new Set() };
   });
 
   // 각 거래처 통계 계산
@@ -17649,8 +17653,10 @@ function maToggleList(mode){
     const pdVat = (x._src === '기성') ? Math.round(pdRaw * 1.1) : pdRaw;
     const unpaid = Math.max(0, billVat - pdVat);
     const paid   = Math.min(pdVat, billVat);
-    if(!byClient[name]) byClient[name] = { name, unpaid:0, paid:0, bill:0, cnt:0, sites:{} };
-    const g = byClient[name];
+    const key = (typeof window.companyKey === 'function') ? window.companyKey(name) : name;
+    if(!byClient[key]) byClient[key] = { name, unpaid:0, paid:0, bill:0, cnt:0, sites:{} };
+    const g = byClient[key];
+    if(name.length > g.name.length) g.name = name;  // 표시 이름은 가장 긴(정식) 표기 유지
     g.unpaid += unpaid; g.paid += paid; g.bill += billVat; g.cnt += 1;
     const site = (x._site || x.site || '').trim();
     if(site){
@@ -18658,14 +18664,19 @@ function homeRender(){
     let sales = [];
     try { if(typeof maGetMerged === 'function') sales = maGetMerged(); } catch(e){}
     let mSales = 0, unpaidSales = 0;
-    const byClient = {};
+    const byClient = {}, clientName = {};
     sales.forEach(r => {
       const amt = num(r.amount);
       const totalVat = (r.total != null) ? num(r.total) : Math.round(amt * 1.1);  // VAT포함 합계
       if((r.date||'').slice(0,7) === ym) mSales += totalVat;
       const u = Math.max(0, totalVat - num(r.paidAmount));  // 받아야 할 돈(VAT포함) - 수금
       unpaidSales += u;
-      if(u > 0){ const c = r.client || r.site || '기타'; byClient[c] = (byClient[c]||0) + u; }
+      if(u > 0){
+        const cRaw = r.client || r.site || '기타';
+        const cKey = (typeof window.companyKey === 'function') ? window.companyKey(cRaw) : cRaw;
+        byClient[cKey] = (byClient[cKey]||0) + u;
+        if(!clientName[cKey] || cRaw.length > clientName[cKey].length) clientName[cKey] = cRaw;
+      }
     });
 
     // 매입 — 부가세 포함 기준
@@ -18696,7 +18707,7 @@ function homeRender(){
         const esc = (typeof _acEsc === 'function') ? _acEsc : (s=>String(s));
         box.style.display = 'block';
         box.innerHTML = '<div style="font-size:10px;color:rgba(255,255,255,0.5);font-weight:700;margin-bottom:6px;">💸 미수금 많은 거래처 <span style="color:rgba(255,255,255,0.4);">(VAT포함)</span></div>'
-          + tops.map(t => '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#fff;padding:3px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;">'+esc(t[0])+'</span><span style="font-weight:800;color:#fca5a5;">'+f(t[1])+'</span></div>').join('');
+          + tops.map(t => '<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#fff;padding:3px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;">'+esc(clientName[t[0]] || t[0])+'</span><span style="font-weight:800;color:#fca5a5;">'+f(t[1])+'</span></div>').join('');
       } else {
         box.style.display = 'none';
       }
@@ -18774,6 +18785,19 @@ function renderMenuDashboard(retry){
   }
 }
 
+// 거래처명 정규화: "(주)", "주식회사", "㈜" 등 법인격 표기와 공백/구두점을 제거해
+// 같은 회사의 다른 표기를 하나로 묶기 위한 키를 만든다.
+window.companyKey = function(name){
+  var s = String(name == null ? '' : name);
+  // 법인격 표기 제거
+  s = s.replace(/㈜|\(주\)|（주）|\(유\)|（유）|\(재\)|\(사\)/g, '');
+  s = s.replace(/주식회사|유한회사|유한책임회사|합자회사|합명회사|재단법인|사단법인|의료법인|학교법인|사회복지법인/g, '');
+  s = s.replace(/\bco\.?,?\s*ltd\.?\b|\binc\.?\b|\bcorp\.?\b|\bltd\.?\b|\bllc\b/gi, '');
+  // 공백/구두점 제거 후 소문자
+  s = s.replace(/[\s\u00A0.,·・\-_'"’`()（）]/g, '').toLowerCase();
+  return s || String(name == null ? '' : name).trim().toLowerCase();
+};
+
 function dashFullRender(targetId){
   const box = document.getElementById(targetId || 'dashFull');
   if(!box) return;
@@ -18804,7 +18828,7 @@ function dashFullRender(targetId){
 
   // 매출 집계
   let mSales = 0, ySales = 0, ySupply = 0, unpaidIn = 0, unpaidInCnt = 0;
-  const monthSales = {}, byClient = {}, unpaidRows = [];
+  const monthSales = {}, byClient = {}, clientName = {}, unpaidRows = [];
   sales.forEach(r => {
     const tot = (r.total != null) ? num(r.total) : Math.round(num(r.amount) * 1.1);
     const sup = num(r.amount);
@@ -18815,15 +18839,18 @@ function dashFullRender(targetId){
     const u = Math.max(0, tot - num(r.paidAmount));
     if(u > 0){
       unpaidIn += u; unpaidInCnt++;
-      const c = r.client || r.site || '기타';
-      byClient[c] = (byClient[c]||0) + u;
-      unpaidRows.push({ client:c, site:r.site||'', amt:u, date:r.date||'' });
+      const cRaw = r.client || r.site || '기타';
+      const cKey = window.companyKey(cRaw);
+      byClient[cKey] = (byClient[cKey]||0) + u;
+      // 표시 이름: 같은 회사 표기 중 가장 긴(정식) 이름 사용
+      if(!clientName[cKey] || cRaw.length > clientName[cKey].length) clientName[cKey] = cRaw;
+      unpaidRows.push({ client:cRaw, key:cKey, site:r.site||'', amt:u, date:r.date||'' });
     }
   });
 
   // 매입 집계
   let mPurch = 0, unpaidOut = 0, unpaidOutCnt = 0;
-  const monthPurch = {}, byVendor = {};
+  const monthPurch = {}, byVendor = {}, vendorName = {};
   purch.forEach(p => {
     const sup = num(p.amount);
     const tot = Math.round(sup * 1.1);
@@ -18833,8 +18860,10 @@ function dashFullRender(targetId){
     const u = Math.round(Math.max(0, sup - num(p.paidAmount)) * 1.1);
     if(u > 0){
       unpaidOut += u; unpaidOutCnt++;
-      const v = p.vendor || '기타';
-      byVendor[v] = (byVendor[v]||0) + u;
+      const vRaw = p.vendor || '기타';
+      const vKey = window.companyKey(vRaw);
+      byVendor[vKey] = (byVendor[vKey]||0) + u;
+      if(!vendorName[vKey] || vRaw.length > vendorName[vKey].length) vendorName[vKey] = vRaw;
     }
   });
 
@@ -18983,10 +19012,10 @@ function dashFullRender(targetId){
   let uHtml = secHead('💸 미수금 거래처 Top 5', 'clientAnalysis', '거래처');
   if(topUnpaid.length){
     uHtml += topUnpaid.map(t => {
-      const oldest = unpaidRows.filter(r => r.client === t[0] && r.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
+      const oldest = unpaidRows.filter(r => r.key === t[0] && r.date).sort((a,b)=>a.date.localeCompare(b.date))[0];
       const dd = oldest ? daysBetween(oldest.date) : 0;
       const warn = dd >= 90 ? ' · <span style="color:#dc2626;font-weight:700;">' + dd + '일 경과</span>' : (dd ? ' · ' + dd + '일 경과' : '');
-      return rowLine(esc(t[0]), full(t[1]), (oldest ? '최초 ' + esc(oldest.date) : '') + warn, '#fca5a5');
+      return rowLine(esc(clientName[t[0]] || t[0]), full(t[1]), (oldest ? '최초 ' + esc(oldest.date) : '') + warn, '#fca5a5');
     }).join('');
   } else {
     uHtml += '<div style="font-size:11px;color:#94a3b8;text-align:center;padding:8px 0;">미수금 없음 ✅</div>';
@@ -18997,7 +19026,7 @@ function dashFullRender(targetId){
   const topVendor = Object.keys(byVendor).map(k => [k, byVendor[k]]).sort((a,b)=>b[1]-a[1]).slice(0,5);
   let vHtml = secHead('🧾 미지급 거래처 Top 5', 'maeip', '매입관리');
   if(topVendor.length){
-    vHtml += topVendor.map(t => rowLine(esc(t[0]), full(t[1]), '', '#d97706')).join('');
+    vHtml += topVendor.map(t => rowLine(esc(vendorName[t[0]] || t[0]), full(t[1]), '', '#d97706')).join('');
   } else {
     vHtml += '<div style="font-size:11px;color:#94a3b8;text-align:center;padding:8px 0;">미지급금 없음 ✅</div>';
   }
