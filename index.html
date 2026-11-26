@@ -324,7 +324,13 @@ input, select, textarea { transition: border-color 0.15s ease, background 0.15s 
     .gs-claim-card { content-visibility:auto; contain-intrinsic-size:auto 96px; }
     /* 노치/홈바 안전영역 */
     #menuTopBar { padding-top:calc(14px + env(safe-area-inset-top)); }
-    .app-back-bar { padding-top:calc(env(safe-area-inset-top)); }
+    .app-back-bar { padding-top:max(8px, env(safe-area-inset-top)); }
+    /* 홈화면 앱(전체화면)으로 실행하면 화면이 휴대폰 상단 상태바 밑까지 그려짐.
+       기기가 상태바 높이를 알려주지 않는 경우(삼성 인터넷 등)를 대비해 최소 여백 확보 */
+    @media (display-mode: fullscreen), (display-mode: standalone) {
+      .app-back-bar { padding-top:max(40px, env(safe-area-inset-top)) !important; }
+      #menuTopBar { padding-top:max(48px, calc(14px + env(safe-area-inset-top))) !important; }
+    }
 
     .page { display:flex; flex-direction:column; min-height:100dvh; max-width:760px; margin:0 auto; }
 
