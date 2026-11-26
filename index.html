@@ -334,6 +334,8 @@ input, select, textarea { transition: border-color 0.15s ease, background 0.15s 
       position:sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center;
       box-shadow:none;
     }
+    /* 현장 화면 제목 줄은 고정하지 않고 같이 스크롤되게 */
+    #siteApp header { position:static; }
     .logo { font-size:22px; font-weight:800; color:#0d1b2a; display:flex; align-items:center; gap:9px; letter-spacing:-0.4px; }
     .logo svg { width:24px !important; height:24px !important; }
     .header-btns { display:flex; gap:4px; }
