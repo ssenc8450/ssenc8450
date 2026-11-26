@@ -990,7 +990,7 @@ th{white-space:nowrap;}
           <button onclick="document.getElementById('siteSearchInput').value='';applyDashSearch();" style="width:auto;padding:8px 12px;font-size:12px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text-sub);cursor:pointer;">✕</button>
         </div>
         <div id="dashSummary" style="display:none;"></div>
-        <div id="dashSiteCards" style="display:flex; flex-direction:column; gap:12px;"></div>
+        <div id="dashSiteCards" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
 
       <!-- 새 현장 등록 -->
@@ -6346,23 +6346,15 @@ function renderDashboard() {
         else                       {                        statusText=daysDiff+'일 전'; }
 
         const card = document.createElement('div');
-        card.style.cssText = 'padding:16px 18px;border-radius:16px;border:1px solid #dfe5ec;background:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,0.05);';
-        const firstDate = site.dates.length ? [...site.dates].sort((a,b)=>a.localeCompare(b))[0] : null;
-        const tagStyle = 'display:inline-block;font-size:11px;font-weight:700;color:#2563eb;background:#eff4ff;padding:3px 10px;border-radius:6px;';
+        card.style.cssText = 'padding:9px 12px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;display:flex;align-items:center;gap:10px;';
+        const firstDate = site.created || (site.dates.length ? [...site.dates].sort((a,b)=>a.localeCompare(b))[0] : null);
+        const fmt = d => d ? String(d).replace(/\//g,'-') : '-';
         card.innerHTML =
-          '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">'+
-            '<div style="font-size:18px;font-weight:800;color:#1e293b;letter-spacing:-0.4px;line-height:1.25;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">'+site.name+'</div>'+
-            '<span style="flex-shrink:0;font-size:12px;font-weight:800;color:#fff;background:'+statusColor+';padding:5px 12px;border-radius:8px;white-space:nowrap;">'+statusText+'</span>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:14px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+site.name+'</div>'+
+            '<div style="font-size:11px;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">등록 '+fmt(firstDate)+' · 마지막 계측 '+fmt(lastDate)+'</div>'+
           '</div>'+
-          '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">'+
-            '<span style="'+tagStyle+'">기록 '+site.records.length+'</span>'+
-            '<span style="'+tagStyle+'">이번달 '+monthRecs+'</span>'+
-            '<span style="'+tagStyle+'">계측기 '+meters.size+'종</span>'+
-          '</div>'+
-          '<div style="margin-top:11px;font-size:13px;color:#64748b;line-height:1.7;">'+
-            '<div>\uD83D\uDCC5 최근 점검: '+(lastDate? lastDate.replace(/\//g,'-') : '-')+'</div>'+
-            '<div>\u2295 등록일: '+(firstDate? firstDate.replace(/\//g,'-') : '-')+'</div>'+
-          '</div>';
+          '<span style="flex-shrink:0;font-size:11px;font-weight:800;color:#fff;background:'+statusColor+';padding:3px 9px;border-radius:6px;white-space:nowrap;">'+statusText+'</span>';
         card.onclick = () => selectSite(realIdx);
         cards.appendChild(card);
       });
@@ -6546,7 +6538,7 @@ function setupEventListeners() {
 
   $('createSiteBtn').onclick = () => {
     const name = $('siteNameInput').value.trim(); if (!name) return;
-    const newSite = {name, dates:[], records:[], memos:{}};
+    const _d=new Date(); const newSite = {name, dates:[], records:[], memos:{}, created: _d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0')};
     state.sites.push(newSite);
     if(typeof logAction==='function') logAction('등록','현장', name);
     $('siteNameInput').value='';
