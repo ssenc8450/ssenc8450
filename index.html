@@ -6053,9 +6053,25 @@ function addBaseTiles(map){
       maxZoom:19, attribution:'공간정보 오픈플랫폼(브이월드)'
     }).addTo(map);
   } else {
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      maxZoom:19, subdomains:'abcd', attribution:'© OpenStreetMap · © CARTO'
-    }).addTo(map);
+    // CARTO는 API 키가 필요해져서 제외. 키 없이 되는 배경지도를 순서대로 시도하고,
+    // 타일이 계속 실패하면 다음 지도로 자동 전환.
+    var providers = [
+      { url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        opt:{ maxZoom:19, attribution:'© Esri' } },
+      { url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        opt:{ maxZoom:19, attribution:'© OpenStreetMap' } }
+    ];
+    var i = 0;
+    (function useProvider(){
+      var p = providers[i];
+      var layer = L.tileLayer(p.url, p.opt).addTo(map);
+      var ok = false, fails = 0;
+      layer.on('tileload', function(){ ok = true; });
+      layer.on('tileerror', function(){
+        if(ok || ++fails < 3 || i >= providers.length - 1) return;
+        map.removeLayer(layer); i++; useProvider();
+      });
+    })();
   }
 }
 function ensureLeaflet(cb){
